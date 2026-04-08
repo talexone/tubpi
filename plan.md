@@ -6,7 +6,7 @@
 - Contraintes : compatibilité avec Raspberry Pi 5, alimentation, sécurité, stabilité du rail.
 
 ## 2) Choisir le matériel
-- Raspberry Pi 5
+- Raspberry Pi 5 ou 3b
 - Carte `RPI Motor Driver Board`
 - Moteur DC ou pas à pas adapté au système de rail
 - Capteurs de fin de course / capteurs de position (fortement recommandé)
