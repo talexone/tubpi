@@ -1,89 +1,49 @@
 """Pilote du moteur pour le déplacement de la caméra sur rail."""
 
-try:
-    import RPi.GPIO as GPIO
-except ImportError:
-    GPIO = None
+import RPi.GPIO as GPIO
 
 class MotorDriver:
-    def __init__(self, forward_pin=20, backward_pin=21, enable_pin=None, simulate=False):
+    def __init__(self, forward_pin=20, backward_pin=21):
+        print('Initialiser les GPIO')
         self.forward_pin = forward_pin
         self.backward_pin = backward_pin
-        self.enable_pin = enable_pin
-        self.pwm = None
         self.enabled = False
-        self.simulate = simulate
-
-        if GPIO is None and not self.simulate:
-            return
-
-        if GPIO is None and self.simulate:
-            print('Mode simulation GPIO activé : aucune commande matérielle envoyée.')
-            return
 
         try:
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(self.forward_pin, GPIO.OUT)
             GPIO.setup(self.backward_pin, GPIO.OUT)
 
-            if self.enable_pin is not None:
-                GPIO.setup(self.enable_pin, GPIO.OUT)
-                self.pwm = GPIO.PWM(self.enable_pin, 1000)
-                self.pwm.start(0)
-
             self.stop()
             self.enabled = True
         except RuntimeError as exc:
             print(f'Impossible d’initialiser les GPIO : {exc}')
-            if self.simulate:
-                print('Basculé en mode simulation GPIO.')
-            else:
-                self.enabled = False
+            self.enabled = False
 
-    def _set_speed(self, speed):
-        if self.pwm is not None and self.enabled:
-            duty_cycle = max(0, min(100, int(speed)))
-            self.pwm.ChangeDutyCycle(duty_cycle)
-
-    def move_forward(self, speed=50):
+    def move_forward(self):
         """Démarrer le déplacement vers l'avant."""
         if not self.enabled and not self.simulate:
             raise RuntimeError('GPIO non disponible')
 
-        if self.simulate:
-            print(f'Simulation : avance à {speed}%')
-            return
-
         GPIO.output(self.forward_pin, GPIO.HIGH)
         GPIO.output(self.backward_pin, GPIO.LOW)
-        self._set_speed(speed)
 
-    def move_backward(self, speed=50):
+    def move_backward(self):
         """Démarrer le déplacement vers l'arrière."""
         if not self.enabled and not self.simulate:
             raise RuntimeError('GPIO non disponible')
 
-        if self.simulate:
-            print(f'Simulation : recule à {speed}%')
-            return
-
         GPIO.output(self.forward_pin, GPIO.LOW)
         GPIO.output(self.backward_pin, GPIO.HIGH)
-        self._set_speed(speed)
 
     def stop(self):
         """Arrêter le moteur."""
-        if not self.enabled and not self.simulate:
-            return
-
-        if self.simulate:
-            print('Simulation : arrêt du moteur')
+        if not self.enabled:
             return
 
         GPIO.output(self.forward_pin, GPIO.LOW)
         GPIO.output(self.backward_pin, GPIO.LOW)
-        if self.pwm is not None:
-            self.pwm.ChangeDutyCycle(0)
+
 
     def calibrate(self):
         """Calibrer la position de référence du rail."""
@@ -92,17 +52,11 @@ class MotorDriver:
 
     def cleanup(self):
         """Libérer les GPIO."""
-        if not self.enabled and not self.simulate:
-            return
-
-        if self.simulate:
-            print('Simulation : cleanup GPIO')
+        if not self.enabled:
             return
 
         self.stop()
-        if self.pwm is not None:
-            self.pwm.stop()
         GPIO.cleanup()
 
     def is_available(self):
-        return self.enabled or self.simulate
+        return self.enabled

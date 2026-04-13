@@ -7,10 +7,8 @@ from motor_driver import MotorDriver
 
 app = Flask(__name__)
 
-simulate_gpio = os.getenv('SIMULATE_GPIO', '0') == '1'
-
 try:
-    motor = MotorDriver(forward_pin=20, backward_pin=21, enable_pin=None, simulate=simulate_gpio)
+    motor = MotorDriver(forward_pin=20, backward_pin=21)
     if not motor.is_available():
         motor = None
 except Exception:
