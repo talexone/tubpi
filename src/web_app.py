@@ -9,7 +9,6 @@ try:
     motor = MotorDriver()
     if motor.is_available():
         print('GPIO disponible : initialisation réussie.')
-        motor.cleanup()
     else:
         print('GPIO non disponible : vérifiez que le programme est exécuté sur un Raspberry Pi avec accès aux GPIO.')
         motor = None
