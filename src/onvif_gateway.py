@@ -85,8 +85,7 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
         if debug_mode:
             logging.debug('Request headers: %s', dict(self.headers))
             if body:
-                logging.debug('Request body:
-%s', body.decode('utf-8', errors='replace'))
+                logging.debug('Request body: %s', body.decode('utf-8', errors='replace'))
 
         try:
             response = requests.request(
