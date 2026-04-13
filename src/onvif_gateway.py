@@ -104,8 +104,7 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
         if debug_mode:
             logging.debug('Response status: %s', response.status_code)
             logging.debug('Response headers: %s', dict(response.headers))
-            logging.debug('Response body:
-%s', response.content.decode('utf-8', errors='replace'))
+            logging.debug('Response body: %s', response.content.decode('utf-8', errors='replace'))
 
         return response
 
