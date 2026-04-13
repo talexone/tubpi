@@ -20,11 +20,13 @@ def index():
 
 @app.before_request
 def check_motor_available():
+    print('check_motor_available')
     if request.endpoint == 'move' and motor is None:
         return jsonify({'error': 'GPIO non disponible ou pas exécuté sur Raspberry Pi'}), 503
 
 @app.route('/move', methods=['POST'])
 def move():
+    print('move')
     data = request.json or {}
     direction = data.get('direction')
     speed = data.get('speed', 50)
