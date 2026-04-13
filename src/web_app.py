@@ -41,9 +41,9 @@ def move():
 
     try:
         if direction == 'forward':
-            motor.move_forward(speed)
+            motor.move_forward()
         elif direction == 'backward':
-            motor.move_backward(speed)
+            motor.move_backward()
         elif direction == 'stop':
             motor.stop()
         elif direction == 'calibrate':
