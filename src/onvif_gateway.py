@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Proxy HTTP simple pour relayer les requêtes ONVIF du réseau local vers la caméra et intercepter focus+ / focus-."""
 
+import argparse
 import http.server
 import logging
 import socketserver
@@ -18,6 +19,8 @@ CAMERA_URL = f'http://{CAMERA_HOST}:{CAMERA_PORT}'
 MOTOR_FORWARD_PIN = 20
 MOTOR_BACKWARD_PIN = 21
 LISTEN_PORT = 80
+
+debug_mode = False
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
@@ -77,7 +80,13 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
 
         if body is None:
             body = b''
+
         logging.info('Proxy %s %s', self.command, self.path)
+        if debug_mode:
+            logging.debug('Request headers: %s', dict(self.headers))
+            if body:
+                logging.debug('Request body:
+%s', body.decode('utf-8', errors='replace'))
 
         try:
             response = requests.request(
@@ -92,6 +101,12 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
             logging.error('Erreur de proxy vers la caméra : %s', exc)
             self.send_error(502, 'Bad gateway')
             return None
+
+        if debug_mode:
+            logging.debug('Response status: %s', response.status_code)
+            logging.debug('Response headers: %s', dict(response.headers))
+            logging.debug('Response body:
+%s', response.content.decode('utf-8', errors='replace'))
 
         return response
 
@@ -112,6 +127,9 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
         return True
 
     def do_GET(self):
+        logging.info('Received GET %s', self.path)
+        if debug_mode:
+            logging.debug('GET headers: %s', dict(self.headers))
         response = self._proxy_request()
         if response is None:
             return
@@ -125,8 +143,15 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(response.content)
 
     def do_POST(self):
+        logging.info('Received POST %s', self.path)
+        if debug_mode:
+            logging.debug('POST headers: %s', dict(self.headers))
         content_length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(content_length) if content_length else b''
+
+        if debug_mode and body:
+            logging.debug('POST body:
+%s', body.decode('utf-8', errors='replace'))
 
         if body:
             self._intercept_focus(body)
@@ -148,6 +173,16 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
 
 
 def main():
+    global debug_mode
+    parser = argparse.ArgumentParser(description='ONVIF gateway proxy avec interception focus')
+    parser.add_argument('--debug', action='store_true', help='Activer le mode debug pour GET/POST')
+    args = parser.parse_args()
+
+    if args.debug:
+        debug_mode = True
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug('Mode debug activé')
+
     if not motor.is_available():
         logging.warning('Le moteur n est pas disponible. Le proxy est néanmoins actif.')
 
