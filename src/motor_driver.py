@@ -1,5 +1,7 @@
 """Pilote du moteur pour le déplacement de la caméra sur rail."""
 
+import sys
+import time
 import RPi.GPIO as GPIO
 
 class MotorDriver:
@@ -64,11 +66,31 @@ class MotorDriver:
         """Vérifie si les GPIO ont été initialisés correctement."""
         return self.is_available()
 
+    def run_test_sequence(self):
+        """Exécute un test moteur : gauche 10s, droite 10s, arrêt."""
+        if not self.enabled:
+            raise RuntimeError('GPIO non disponible')
+
+        print('Test moteur : aller gauche 10 secondes')
+        self.move_backward()
+        time.sleep(10)
+
+        print('Test moteur : aller droit 10 secondes')
+        self.move_forward()
+        time.sleep(10)
+
+        print('Arrêt du moteur')
+        self.stop()
+
 
 if __name__ == '__main__':
     driver = MotorDriver()
     if driver.is_available():
-        print('GPIO disponible : initialisation réussie.')
-        driver.cleanup()
+        if len(sys.argv) > 1 and sys.argv[1] == 'test':
+            driver.run_test_sequence()
+            driver.cleanup()
+        else:
+            print('GPIO disponible : initialisation réussie.')
+            driver.cleanup()
     else:
         print('GPIO non disponible : vérifiez que le programme est exécuté sur un Raspberry Pi avec accès aux GPIO.')

@@ -38,6 +38,8 @@ Développer un système permettant de déplacer automatiquement une caméra sur 
 5. Vérifier les connexions du moteur et des capteurs.
 6. Tester l'accès GPIO avant de lancer le serveur :
    - `python src/motor_driver.py`
+   - Pour un test moteur automatique (gauche 10s, droit 10s, arrêt) :
+     `python src/motor_driver.py test`
 7. Lancer le serveur web avec `python src/web_app.py`.
 8. Ouvrir un navigateur sur `http://<adresse-du-raspberry-pi>:5000/` pour accéder à la page de test.
 
