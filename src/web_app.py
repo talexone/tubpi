@@ -6,9 +6,12 @@ from motor_driver import MotorDriver
 app = Flask(__name__)
 
 try:
-    motor = MotorDriver(forward_pin=20, backward_pin=21)
-    print(f'init motor: motor={"available" if motor and motor.is_available() else "unavailable"}')
-    if not motor.is_available():
+    motor = MotorDriver()
+    if motor.is_available():
+        print('GPIO disponible : initialisation réussie.')
+        motor.cleanup()
+    else:
+        print('GPIO non disponible : vérifiez que le programme est exécuté sur un Raspberry Pi avec accès aux GPIO.')
         motor = None
 except Exception as exc:
     print(f'GPIO non disponible: {exc}')
