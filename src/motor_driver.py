@@ -1,4 +1,11 @@
 """Pilote du moteur pour le déplacement de la caméra sur rail."""
+import RPi.GPIO as GPIO
+
+R1=20 # m1
+R2=21 # m2
+
+GPIO.setup(R1, GPIO.OUT)  
+GPIO.setup(R2, GPIO.OUT)
 
 class MotorDriver:
     def __init__(self, enable_pin=None, forward_pin=None, backward_pin=None):
@@ -9,15 +16,18 @@ class MotorDriver:
 
     def move_forward(self, speed=50):
         """Démarrer le déplacement vers l'avant."""
-        raise NotImplementedError
+        GPIO.output(L1, GPIO.HIGH)
+        GPIO.output(L2, GPIO.LOW)
 
     def move_backward(self, speed=50):
         """Démarrer le déplacement vers l'arrière."""
-        raise NotImplementedError
+        GPIO.output(L1, GPIO.LOW)
+        GPIO.output(L2, GPIO.HIGH)
 
     def stop(self):
         """Arrêter le moteur."""
-        raise NotImplementedError
+        GPIO.output(L1, GPIO.LOW)
+        GPIO.output(L2, GPIO.LOW)
 
     def calibrate(self):
         """Calibrer la position de référence du rail."""
