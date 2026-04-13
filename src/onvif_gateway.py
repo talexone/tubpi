@@ -148,8 +148,7 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
         body = self.rfile.read(content_length) if content_length else b''
 
         if debug_mode and body:
-            logging.debug('POST body:
-%s', body.decode('utf-8', errors='replace'))
+            logging.debug('POST body: %s', body.decode('utf-8', errors='replace'))
 
         if body:
             self._intercept_focus(body)
