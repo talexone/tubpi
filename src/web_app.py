@@ -20,7 +20,7 @@ def index():
 
 @app.before_request
 def check_motor_available():
-    print('check_motor_available')
+    print(f'check_motor_available: endpoint={request.endpoint}, motor={"available" if motor else "unavailable"}')
     if request.endpoint == 'move' and motor is None:
         return jsonify({'error': 'GPIO non disponible ou pas exécuté sur Raspberry Pi'}), 503
 
