@@ -12,7 +12,8 @@ try:
     print(f'init motor: motor={"available" if motor else "unavailable"}')
     if not motor.is_available():
         motor = None
-except Exception:
+except Exception as exc:
+    print(f'GPIO non disponible: {exc}')
     motor = None
 
 @app.route('/')
