@@ -9,6 +9,7 @@ app = Flask(__name__)
 
 try:
     motor = MotorDriver(forward_pin=20, backward_pin=21)
+    print(f'init motor: motor={"available" if motor else "unavailable"}')
     if not motor.is_available():
         motor = None
 except Exception:
