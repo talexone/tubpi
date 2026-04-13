@@ -5,11 +5,21 @@ from motor_driver import MotorDriver
 
 app = Flask(__name__)
 
-motor = MotorDriver(forward_pin=20, backward_pin=21, enable_pin=None)
+try:
+    motor = MotorDriver(forward_pin=20, backward_pin=21, enable_pin=None)
+    if not motor.enabled:
+        motor = None
+except Exception:
+    motor = None
 
 @app.route('/')
 def index():
     return render_template('test.html')
+
+@app.before_request
+def check_motor_available():
+    if request.endpoint == 'move' and motor is None:
+        return jsonify({'error': 'GPIO non disponible ou pas exécuté sur Raspberry Pi'}), 503
 
 @app.route('/move', methods=['POST'])
 def move():
