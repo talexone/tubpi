@@ -35,7 +35,30 @@ M1	M2	M3	M4	Descriptions
 
 ## Capteurs
 - Capteurs de fin de course pour chaque extrémité du rail
+### Schéma de connexion
+Comme vous avez deux capteurs, vous allez devoir doubler le câblage sur votre Mini Base
+
+Composant           Patte Capteur       Connexion Raspberry Pi
+LED 1 (Haut)        A (Anode)           3.3V (via résistance 220 Ohm)
+                    K (Cathode)         GND
+LED 1 (Bas)         A (Anode)           3.3V (via résistance 220 Ohm)
+                    K (Cathode)         GND
+Phototransistor 1   C (Collecteur)     GPIO 23
+                    E (Émetteur)        GND
+Phototransistor 2   C (Collecteur)     GPIO 24
+                    E (Émetteur)        GND
+
 - Capteurs de position ou encodeur pour mesurer le déplacement
+L'encodeur HEDS fonctionne en 5V. S'il envoie ses signaux (A, B, Index) directement dans les pins du Pi, le processeur du CM5 sera endommagé de façon irréversible. Le Level Shifter joue le rôle de traducteur sécurisé.
+### Schéma de branchement
+Le Level Shifter possède deux côtés : un côté HV (High Voltage - 5V) et un côté LV (Low Voltage - 3.3V).
+Côté Encodeur (5V)      Côté Level Shifter      Côté Raspberry Pi (3.3V)
+VCC (Pin 4)             HV (Alimentation 5V)    —
+GND (Pin 1)             GND (Masse commune)     GND
+—                       LV (Référence 3.3V)     Pin 3.3V
+Canal A (Pin 3)         HV1 (Entrée 5V)         LV1 $ -> GPIO 17
+Canal B (Pin 5)         HV2 (Entrée 5V)         LV2 $ -> GPIO 27
+Index I (Pin 2)         HV3 (Entrée 5V)         LV3 $ -> GPIO 22
 
 ## Caméra
 - Caméra IP PTZ ONVIF (par exemple Dahua)
