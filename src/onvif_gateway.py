@@ -423,7 +423,7 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
             if motor.is_available():
                 motor.stop()
                 logging.info('Commande focus stop : moteur arrêté')
-            return True
+            return False # Let stop commands pass through to the camera as well, in case it needs to do additional processing
 
         if not motor.is_available():
             logging.warning('Commande focus interceptée (%s) mais le moteur n est pas disponible', direction)
