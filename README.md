@@ -40,8 +40,36 @@ Développer un système permettant de déplacer automatiquement une caméra sur 
    - `python src/motor_driver.py`
    - Pour un test moteur automatique (gauche 10s, droit 10s, arrêt) :
      `python src/motor_driver.py test`
+   - Pour tester les capteurs de fin de course :
+     `python src/test_limit_switches.py`
 7. Lancer le serveur web avec `python src/web_app.py`.
 8. Ouvrir un navigateur sur `http://<adresse-du-raspberry-pi>:5000/` pour accéder à la page de test.
+
+## Capteurs de fin de course
+
+Le système intègre des capteurs optoélectroniques (phototransistors) pour détecter les fins de course :
+
+### Configuration matérielle
+- **GPIO 23** : capteur de fin de course arrière (backward) - position de référence
+- **GPIO 24** : capteur de fin de course avant (forward)
+- Type : phototransistors avec LED infrarouge
+- Logique : HIGH = libre, LOW = déclenché (faisceau coupé)
+
+### Fonctionnalités de sécurité
+- **Arrêt automatique** : le moteur s'arrête dès qu'un capteur est déclenché
+- **Prévention** : impossible de démarrer un mouvement si le capteur correspondant est déjà déclenché
+- **Calibration** : fonction automatique utilisant le capteur arrière comme position de référence
+
+### Tests et surveillance
+```bash
+# Test interactif des capteurs
+python src/test_limit_switches.py
+
+# État via l'API web
+curl http://localhost:5000/status
+```
+
+Pour plus de détails, consultez [docs/hardware.md](docs/hardware.md) et [docs/software.md](docs/software.md).
 
 ## Passerelle ONVIF
 - Exécuter sur le Raspberry Pi : `sudo python src/onvif_gateway.py`

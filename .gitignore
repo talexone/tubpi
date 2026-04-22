@@ -5,3 +5,4 @@
 *.DS_Store
 ~*.*
 aux_board-backups/
+docs/aux_board/.history

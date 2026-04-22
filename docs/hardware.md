@@ -43,10 +43,16 @@ LED 1 (Haut)        A (Anode)           3.3V (via résistance 220 Ohm)
                     K (Cathode)         GND
 LED 1 (Bas)         A (Anode)           3.3V (via résistance 220 Ohm)
                     K (Cathode)         GND
-Phototransistor 1   C (Collecteur)     GPIO 23
+Phototransistor 1   C (Collecteur)     GPIO 23 (capteur arrière/backward)
                     E (Émetteur)        GND
-Phototransistor 2   C (Collecteur)     GPIO 24
+Phototransistor 2   C (Collecteur)     GPIO 24 (capteur avant/forward)
                     E (Émetteur)        GND
+
+### Fonctionnement
+- **État normal (faisceau libre)** : Le phototransistor reçoit la lumière, le signal GPIO est HIGH (pull-up activé)
+- **Fin de course déclenchée (faisceau coupé)** : Le phototransistor ne reçoit plus de lumière, le signal GPIO passe à LOW
+- **Sécurité** : Le moteur s'arrête automatiquement lorsqu'un capteur détecte une fin de course
+- **Calibration** : Utilise le capteur arrière comme position de référence (home position)
 
 - Capteurs de position ou encodeur pour mesurer le déplacement
 L'encodeur HEDS fonctionne en 5V. S'il envoie ses signaux (A, B, Index) directement dans les pins du Pi, le processeur du CM5 sera endommagé de façon irréversible. Le Level Shifter joue le rôle de traducteur sécurisé.

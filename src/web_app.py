@@ -72,6 +72,29 @@ def move():
 
     return jsonify({'direction': direction})
 
+@app.route('/status', methods=['GET'])
+def status():
+    """Retourne l'état actuel du système."""
+    if motor is None:
+        init_motor()
+    
+    if motor is None:
+        return jsonify({
+            'available': False,
+            'message': 'GPIO non disponible'
+        }), 503
+    
+    try:
+        limit_status = motor.get_limit_switches_status()
+        return jsonify({
+            'available': True,
+            'limit_switches': limit_status,
+            'can_move_forward': motor.can_move_forward(),
+            'can_move_backward': motor.can_move_backward()
+        })
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
     if motor is None:
