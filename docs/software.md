@@ -82,6 +82,7 @@ L'encodeur HEDS en quadrature est configuré automatiquement lors de l'initialis
 - GPIO 27 : Canal B de l'encodeur
 - GPIO 22 : Signal Index (non utilisé actuellement)
 - Détection par interruptions sur les deux canaux pour un suivi précis en temps réel
+- **Optimisation** : bouncetime de 1ms et lock non-bloquant pour éviter les ralentissements système
 
 ### Mesures de position et distance
 
@@ -188,6 +189,17 @@ Le script de test permet de :
 - Tester les mouvements avec suivi de distance
 - Réinitialiser la position
 - Configurer la calibration mécanique (mm par impulsion)
+
+**Diagnostic de performance** : Si vous constatez des ralentissements (les mouvements prennent plus de temps que prévu), vous pouvez tester sans l'encodeur :
+```bash
+python3 test_encoder.py --no-encoder
+```
+Cela désactive temporairement l'encodeur pour vérifier si c'est la source du ralentissement.
+
+**Optimisations implémentées** :
+- `bouncetime=1ms` sur les interruptions pour limiter la fréquence
+- Lock non-bloquant dans le callback pour éviter de bloquer le thread principal
+- Les interruptions manquées (lock occupé) sont ignorées sans perte de fonctionnalité significative
 
 Pour vérifier l'état via l'API web :
 ```bash

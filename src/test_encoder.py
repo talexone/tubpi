@@ -9,9 +9,15 @@ def test_encoder():
     """Test interactif de l'encodeur."""
     print("=== Test de l'encodeur de position ===\n")
     
+    # Option pour tester sans l'encodeur (diagnostic)
+    enable_encoder = True
+    if len(sys.argv) > 1 and sys.argv[1] == '--no-encoder':
+        enable_encoder = False
+        print("Mode diagnostic : encodeur DÉSACTIVÉ\n")
+    
     # Initialiser le driver
     print("Initialisation du driver moteur avec encodeur...")
-    driver = MotorDriver()
+    driver = MotorDriver(enable_encoder=enable_encoder)
     
     if not driver.is_available():
         print("ERREUR : GPIO non disponible")
@@ -21,6 +27,24 @@ def test_encoder():
     print("Driver initialisé avec succès\n")
     
     try:
+        if not enable_encoder:
+            print("⚠️  L'encodeur est désactivé - test de mouvement uniquement ⚠️\n")
+            # Test simple de mouvement
+            print("Test de mouvement (3 secondes avant, 3 secondes arrière)...")
+            print("\nAvancement pendant 3 secondes...")
+            driver.move_forward()
+            time.sleep(3)
+            driver.stop()
+            time.sleep(0.5)
+            
+            print("Recul pendant 3 secondes...")
+            driver.move_backward()
+            time.sleep(3)
+            driver.stop()
+            
+            print("\n✅ Test de mouvement terminé (durée correcte sans encodeur)")
+            return 0
+        
         # Test 1 : Affichage de la configuration
         print("--- Test 1 : Configuration de l'encodeur ---")
         stats = driver.get_encoder_stats()

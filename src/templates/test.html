@@ -9,11 +9,22 @@
       .container { max-width: 640px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
       h1 { margin-top: 0; }
       .buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 18px 0; }
+      .buttons button:nth-child(7) { grid-column: 1 / -1; }
       button { padding: 16px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
       button.primary { background: #1f7ef1; color: #fff; }
       button.secondary { background: #e0e0e0; color: #222; }
       button.danger { background: #e14f4f; color: #fff; }
       .status { margin-top: 18px; padding: 14px; background: #f3f8ff; border: 1px solid #d7e6ff; border-radius: 8px; }
+      .encoder-panel { margin-top: 18px; padding: 16px; background: #f0f9f4; border: 1px solid #c6e6d4; border-radius: 8px; }
+      .encoder-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; }
+      .stat-box { padding: 12px; background: white; border-radius: 6px; border: 1px solid #e0e0e0; }
+      .stat-label { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+      .stat-value { font-size: 20px; font-weight: bold; color: #1f7ef1; }
+      .stat-unit { font-size: 14px; color: #666; margin-left: 4px; }
+      .limit-switches { display: flex; gap: 12px; margin-top: 12px; }
+      .limit-switch { padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; }
+      .limit-switch.free { background: #d4edda; color: #155724; }
+      .limit-switch.triggered { background: #f8d7da; color: #721c24; }
       .row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
       label { min-width: 80px; }
       input[type="range"] { flex: 1; }
@@ -31,6 +42,33 @@
         <button class="secondary" onclick="sendMove('calibrate')">Calibrer</button>
         <button class="danger" onclick="sendMove('focus_plus')">Focus +</button>
         <button class="danger" onclick="sendMove('focus_minus')">Focus -</button>
+        <button class="secondary" onclick="resetEncoder()">Réinit. Position</button>
+      </div>
+
+      <div class="encoder-panel">
+        <strong>📊 Encodeur de position</strong>
+        <div class="encoder-stats">
+          <div class="stat-box">
+            <div class="stat-label">Position actuelle</div>
+            <div class="stat-value" id="position">--</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Distance session</div>
+            <div class="stat-value" id="session">--</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Distance totale</div>
+            <div class="stat-value" id="total">--</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Impulsions</div>
+            <div class="stat-value" id="pulses">--</div>
+          </div>
+        </div>
+        <div class="limit-switches">
+          <div class="limit-switch" id="limit-forward">Capteur avant: --</div>
+          <div class="limit-switch" id="limit-backward">Capteur arrière: --</div>
+        </div>
       </div>
 
       <div class="status">
@@ -41,6 +79,45 @@
 
     <script>
       const responseBox = document.getElementById('response');
+      const positionEl = document.getElementById('position');
+      const sessionEl = document.getElementById('session');
+      const totalEl = document.getElementById('total');
+      const pulsesEl = document.getElementById('pulses');
+      const limitForwardEl = document.getElementById('limit-forward');
+      const limitBackwardEl = document.getElementById('limit-backward');
+
+      // Update encoder values in real-time
+      async function updateEncoderData() {
+        try {
+          const res = await fetch('/status');
+          if (!res.ok) return;
+          
+          const data = await res.json();
+          
+          if (data.encoder) {
+            const enc = data.encoder;
+            positionEl.innerHTML = `${enc.position_mm.toFixed(2)}<span class="stat-unit">mm</span>`;
+            sessionEl.innerHTML = `${enc.session_distance_mm.toFixed(2)}<span class="stat-unit">mm</span>`;
+            totalEl.innerHTML = `${enc.total_distance_mm.toFixed(2)}<span class="stat-unit">mm</span>`;
+            pulsesEl.innerHTML = `${enc.position_pulses}<span class="stat-unit">imp</span>`;
+          }
+          
+          if (data.limit_switches) {
+            const ls = data.limit_switches;
+            limitForwardEl.textContent = `Capteur avant: ${ls.forward ? 'DÉCLENCHÉ' : 'LIBRE'}`;
+            limitForwardEl.className = 'limit-switch ' + (ls.forward ? 'triggered' : 'free');
+            limitBackwardEl.textContent = `Capteur arrière: ${ls.backward ? 'DÉCLENCHÉ' : 'LIBRE'}`;
+            limitBackwardEl.className = 'limit-switch ' + (ls.backward ? 'triggered' : 'free');
+          }
+        } catch (error) {
+          console.error('Erreur lors de la récupération des données:', error);
+        }
+      }
+
+      // Update every 200ms for real-time display
+      setInterval(updateEncoderData, 200);
+      // Initial update
+      updateEncoderData();
 
       async function sendMove(direction) {
         try {
@@ -61,6 +138,24 @@
           responseBox.textContent = `Erreur réseau : ${error.message}`;
         }
       }
-    </script>
+      async function resetEncoder() {
+        try {
+          const res = await fetch('/encoder/reset', {
+            method: 'POST'
+          });
+
+          const result = await res.json();
+          if (!res.ok) {
+            responseBox.textContent = `Erreur ${res.status}: ${result.error || JSON.stringify(result)}`;
+            return;
+          }
+
+          responseBox.textContent = JSON.stringify(result, null, 2);
+          // Update display immediately
+          updateEncoderData();
+        } catch (error) {
+          responseBox.textContent = `Erreur réseau : ${error.message}`;
+        }
+      }    </script>
   </body>
 </html>

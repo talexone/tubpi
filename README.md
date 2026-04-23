@@ -103,6 +103,9 @@ Exemple : poulie Ø30mm avec encodeur 100 imp/tour → `MM_PER_PULSE = 0.9425 mm
 # Test interactif de l'encodeur
 python src/test_encoder.py
 
+# Test sans encodeur (diagnostic de performance)
+python src/test_encoder.py --no-encoder
+
 # Statistiques via l'API web
 curl http://localhost:5000/encoder
 
@@ -112,6 +115,8 @@ curl http://localhost:5000/status
 # Réinitialiser la position
 curl -X POST http://localhost:5000/encoder/reset
 ```
+
+**Note sur les performances** : L'encodeur utilise des interruptions optimisées (bouncetime=1ms, lock non-bloquant) pour éviter les ralentissements système. Si vous constatez des problèmes de timing, utilisez le mode `--no-encoder` pour diagnostiquer.
 
 Pour plus de détails sur la calibration et l'API, consultez [docs/software.md](docs/software.md).
 

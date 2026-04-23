@@ -18,7 +18,8 @@ class MotorDriver:
 
     def __init__(self, forward_pin=20, backward_pin=21, pwm_pin=26, 
                  limit_forward_pin=23, limit_backward_pin=24,
-                 encoder_a_pin=17, encoder_b_pin=27, encoder_index_pin=22):
+                 encoder_a_pin=17, encoder_b_pin=27, encoder_index_pin=22,
+                 enable_encoder=True):
         print("Initialiser les GPIO")
         self.forward_pin = forward_pin
         self.backward_pin = backward_pin
@@ -29,6 +30,7 @@ class MotorDriver:
         self.limit_backward_pin = limit_backward_pin
         
         # Encodeur de position
+        self.encoder_enabled = enable_encoder
         self.encoder_a_pin = encoder_a_pin
         self.encoder_b_pin = encoder_b_pin
         self.encoder_index_pin = encoder_index_pin
@@ -60,19 +62,24 @@ class MotorDriver:
             GPIO.setup(self.limit_forward_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
             GPIO.setup(self.limit_backward_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
             
-            # Configuration de l'encodeur
-            # Les signaux viennent du Level Shifter (5V -> 3.3V)
-            GPIO.setup(self.encoder_a_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            GPIO.setup(self.encoder_b_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            GPIO.setup(self.encoder_index_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            
-            # Lire l'état initial de l'encodeur
-            self._encoder_last_a = GPIO.input(self.encoder_a_pin)
-            self._encoder_last_b = GPIO.input(self.encoder_b_pin)
-            
-            # Configurer les interruptions sur les canaux A et B (détection de front)
-            GPIO.add_event_detect(self.encoder_a_pin, GPIO.BOTH, callback=self._encoder_callback)
-            GPIO.add_event_detect(self.encoder_b_pin, GPIO.BOTH, callback=self._encoder_callback)
+            # Configuration de l'encodeur (optionnel)
+            if self.encoder_enabled:
+                # Les signaux viennent du Level Shifter (5V -> 3.3V)
+                GPIO.setup(self.encoder_a_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                GPIO.setup(self.encoder_b_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                GPIO.setup(self.encoder_index_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                
+                # Lire l'état initial de l'encodeur
+                self._encoder_last_a = GPIO.input(self.encoder_a_pin)
+                self._encoder_last_b = GPIO.input(self.encoder_b_pin)
+                
+                # Configurer les interruptions sur les canaux A et B (détection de front)
+                # bouncetime=1ms pour limiter la fréquence et éviter les rebonds
+                GPIO.add_event_detect(self.encoder_a_pin, GPIO.BOTH, callback=self._encoder_callback, bouncetime=1)
+                GPIO.add_event_detect(self.encoder_b_pin, GPIO.BOTH, callback=self._encoder_callback, bouncetime=1)
+                print("Encodeur activé avec bouncetime=1ms")
+            else:
+                print("Encodeur désactivé")
 
             self._pwm = GPIO.PWM(self._pwm_pin, self.PWM_FREQ)
             self._pwm.start(0)
@@ -94,8 +101,16 @@ class MotorDriver:
         """
         Callback pour les interruptions de l'encodeur en quadrature.
         Détermine la direction et met à jour les compteurs.
+        Optimisé pour être rapide et ne pas bloquer le thread principal.
         """
-        with self._encoder_lock:
+        if not self.encoder_enabled:
+            return
+        
+        # Utiliser trylock pour ne pas bloquer si occupé
+        if not self._encoder_lock.acquire(blocking=False):
+            return  # Skip this interrupt if we can't get the lock immediately
+        
+        try:
             # Lire l'état actuel des deux canaux
             a = GPIO.input(self.encoder_a_pin)
             b = GPIO.input(self.encoder_b_pin)
@@ -112,6 +127,7 @@ class MotorDriver:
                     self._encoder_position += 1
                 self._encoder_total_pulses += 1
                 self._encoder_session_pulses += 1
+                self._encoder_last_a = a
             elif channel == self.encoder_b_pin and b != self._encoder_last_b:
                 if a == b:
                     # Rotation avant (forward)
@@ -121,10 +137,9 @@ class MotorDriver:
                     self._encoder_position -= 1
                 self._encoder_total_pulses += 1
                 self._encoder_session_pulses += 1
-            
-            # Mettre à jour l'état précédent
-            self._encoder_last_a = a
-            self._encoder_last_b = b
+                self._encoder_last_b = b
+        finally:
+            self._encoder_lock.release()
 
     def _is_limit_forward_triggered(self):
         """Vérifie si le capteur de fin de course avant est déclenché."""

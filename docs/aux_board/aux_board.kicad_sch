@@ -1947,6 +1947,136 @@
 		)
 		(uuid "fb0f0914-91e4-45d8-94bd-ea4d0c278ecb")
 	)
+	(label "CO2"
+		(at 144.78 40.64 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "0ffc6c11-07b6-4cca-bd67-21baa5b55761")
+	)
+	(label "Ch B"
+		(at 81.28 87.63 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "1d5f9024-2a2b-4a30-9af3-14ec94f3f2da")
+	)
+	(label "Ch B"
+		(at 139.7 40.64 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "3a861792-26a0-428e-bf69-4f038843e460")
+	)
+	(label "Ch I"
+		(at 137.16 40.64 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "40913415-bc7c-4d7d-8714-af2814245adc")
+	)
+	(label "3.3V"
+		(at 152.4 40.64 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "4fbbb4f0-a0b7-4085-b03b-3a636ea17ca9")
+	)
+	(label "CO1"
+		(at 147.32 40.64 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "55b259a7-76e6-439a-992f-92789a2335e8")
+	)
+	(label "Ch A"
+		(at 81.28 90.17 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "6b1b1286-4393-471b-baa2-92882f53e3b1")
+	)
+	(label "5V"
+		(at 134.62 40.64 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "6c536a3a-f558-440b-8805-5b46435b85f3")
+	)
+	(label "Vcc"
+		(at 81.28 85.09 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "c01602f2-493f-4a79-861e-2f7359f3bd5c")
+	)
+	(label "Ch A"
+		(at 142.24 40.64 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "c9cf422f-c43e-400a-9563-c536ab7325e6")
+	)
+	(label "Ch I"
+		(at 81.28 80.01 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "f04e6375-68dd-4584-8f5c-4ddfa9beb8b4")
+	)
+	(label "Gnd"
+		(at 149.86 40.64 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "f298c5b2-2d87-4cc4-a576-a2592b9fd60f")
+	)
+	(label "Gnd"
+		(at 81.28 82.55 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "f4b6a319-aa6d-45e0-8867-b7b55168f2c6")
+	)
 	(symbol
 		(lib_id "Connector:Conn_01x08_Pin")
 		(at 144.78 35.56 270)
