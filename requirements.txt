@@ -1,4 +1,5 @@
 Flask>=2.3
 requests>=2.0
-# Pour Raspberry Pi 5 - compatible avec RPi.GPIO API
-rpi-lgpio>=0.6
+# pigpio - Bibliothèque GPIO haute performance pour tous les Raspberry Pi (incluant Pi 5)
+# Compatible Pi 1, 2, 3, 4, 5 - Supporte PWM matériel, timing précis, callbacks optimisés
+pigpio>=1.78
