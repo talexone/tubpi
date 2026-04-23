@@ -1,0 +1,18 @@
+[Unit]
+Description=Tubpi Network Setup - Configure le réseau pour la passerelle caméra
+Before=network-online.target
+Wants=network-pre.target
+After=network-pre.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+ExecStart=/opt/tubpi/setup_camera_gateway.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tubpi-network-setup
+
+[Install]
+WantedBy=multi-user.target

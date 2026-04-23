@@ -24,6 +24,11 @@ Développer un système permettant de déplacer automatiquement une caméra sur 
 - `requirements.txt` : dépendances Python
 - `src/` : code source du projet
 - `docs/` : documentation matériel et architecture
+- `systemd/` : fichiers de service pour démarrage automatique
+- `install_services.sh` : script d'installation des services
+- `uninstall_services.sh` : script de désinstallation des services
+- `check_services.sh` : script de vérification de l'état des services
+- `config.env.example` : exemple de fichier de configuration
 
 ## Démarrage
 1. Installer l'OS sur le Raspberry Pi 5.
@@ -119,6 +124,66 @@ curl -X POST http://localhost:5000/encoder/reset
 **Note sur les performances** : L'encodeur utilise des interruptions optimisées (bouncetime=1ms, lock non-bloquant) pour éviter les ralentissements système. Si vous constatez des problèmes de timing, utilisez le mode `--no-encoder` pour diagnostiquer.
 
 Pour plus de détails sur la calibration et l'API, consultez [docs/software.md](docs/software.md).
+
+## Installation en tant que service (démarrage automatique)
+
+Pour que Tubpi démarre automatiquement au boot du Raspberry Pi, utilisez les services systemd fournis.
+
+### Installation rapide
+
+```bash
+# 1. Copier le projet dans /opt/tubpi
+sudo mkdir -p /opt/tubpi
+sudo cp -r /chemin/vers/tubpi/* /opt/tubpi/
+
+# 2. Rendre le script d'installation exécutable
+sudo chmod +x /opt/tubpi/install_services.sh
+
+# 3. Lancer l'installation interactive
+sudo /opt/tubpi/install_services.sh
+```
+
+Le script d'installation vous guidera à travers :
+- Choix des services à activer
+- Installation des dépendances Python
+- Configuration des permissions GPIO
+- Démarrage immédiat (optionnel)
+
+### Services disponibles
+
+1. **tubpi-network-setup** : Configure le réseau pour la passerelle caméra
+2. **tubpi-onvif-gateway** : Proxy ONVIF sur le port 80 (interception focus+/focus-)
+3. **tubpi-webapp** : Interface web sur le port 5000
+
+### Gestion des services
+
+```bash
+# Voir l'état
+sudo systemctl status tubpi-onvif-gateway
+sudo systemctl status tubpi-webapp
+
+# Voir les logs en temps réel
+sudo journalctl -u tubpi-onvif-gateway -f
+sudo journalctl -u tubpi-webapp -f
+
+# Redémarrer un service
+sudo systemctl restart tubpi-onvif-gateway
+
+# Arrêter/Démarrer
+sudo systemctl stop tubpi-webapp
+sudo systemctl start tubpi-webapp
+
+# Désactiver le démarrage automatique
+sudo systemctl disable tubpi-network-setup
+```
+
+### Désinstallation
+
+```bash
+sudo /opt/tubpi/uninstall_services.sh
+```
+
+Pour plus de détails, consultez [docs/services.md](docs/services.md).
 
 ## Passerelle ONVIF
 - Exécuter sur le Raspberry Pi : `sudo python src/onvif_gateway.py`

@@ -1,4 +1,42 @@
+# Backup files
 *.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local configuration
+config.local.py
+*.local.sh
+config.env
+
+# Systemd (installed versions)
+# Keep systemd/*.service in repo, but ignore if copied elsewhere
+
 *.tmp
 *.swp
 *.swo

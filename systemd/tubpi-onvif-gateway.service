@@ -1,0 +1,27 @@
+[Unit]
+Description=Tubpi ONVIF Gateway - Proxy HTTP pour caméra avec interception focus+/focus-
+After=network-online.target
+Wants=network-online.target
+# Assure que le réseau est configuré avant de démarrer
+After=tubpi-network-setup.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/tubpi/src
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/usr/bin/python3 /opt/tubpi/src/onvif_gateway.py
+Restart=always
+RestartSec=10
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tubpi-onvif-gateway
+
+# Sécurité
+# Le service a besoin de root pour écouter sur le port 80 et accéder aux GPIO
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
