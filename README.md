@@ -129,6 +129,8 @@ Pour plus de détails sur la calibration et l'API, consultez [docs/software.md](
 
 Pour que Tubpi démarre automatiquement au boot du Raspberry Pi, utilisez les services systemd fournis.
 
+**Note** : Le script détecte automatiquement votre distribution (Raspberry Pi OS, DietPi, Debian, Ubuntu) et s'adapte en conséquence. Pour DietPi ou autres distributions, consultez [docs/installation-dietpi.md](docs/installation-dietpi.md).
+
 ### Installation rapide
 
 ```bash

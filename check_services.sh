@@ -100,11 +100,29 @@ echo ""
 # Vérification GPIO
 echo -e "${BLUE}=== Vérification GPIO ===${NC}\n"
 echo -e "${YELLOW}Permissions GPIO${NC}"
-if groups pi | grep -q gpio; then
-    echo -e "  ${GREEN}✓${NC} Utilisateur 'pi' dans le groupe 'gpio'"
+
+# Détecter l'utilisateur non-root
+TARGET_USER=""
+if [ -n "$SUDO_USER" ]; then
+    TARGET_USER="$SUDO_USER"
 else
-    echo -e "  ${RED}✗${NC} Utilisateur 'pi' PAS dans le groupe 'gpio'"
-    echo -e "  ${YELLOW}→${NC} Exécuter : sudo usermod -a -G gpio pi"
+    for user in pi dietpi debian ubuntu; do
+        if id "$user" &>/dev/null; then
+            TARGET_USER="$user"
+            break
+        fi
+    done
+fi
+
+if [ -n "$TARGET_USER" ]; then
+    if groups "$TARGET_USER" | grep -q gpio; then
+        echo -e "  ${GREEN}✓${NC} Utilisateur '$TARGET_USER' dans le groupe 'gpio'"
+    else
+        echo -e "  ${RED}✗${NC} Utilisateur '$TARGET_USER' PAS dans le groupe 'gpio'"
+        echo -e "  ${YELLOW}→${NC} Exécuter : sudo usermod -a -G gpio $TARGET_USER"
+    fi
+else
+    echo -e "  ${YELLOW}○${NC} Impossible de détecter l'utilisateur non-root"
 fi
 echo ""
 

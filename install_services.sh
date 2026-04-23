@@ -41,24 +41,60 @@ if [ "$CURRENT_DIR" != "$PROJECT_DIR" ]; then
     fi
 fi
 
+# Détecter l'utilisateur non-root (celui qui a lancé sudo)
+if [ -n "$SUDO_USER" ]; then
+    TARGET_USER="$SUDO_USER"
+else
+    # Si pas de SUDO_USER, chercher un utilisateur non-root existant
+    for user in pi dietpi debian ubuntu; do
+        if id "$user" &>/dev/null; then
+            TARGET_USER="$user"
+            break
+        fi
+    done
+    if [ -z "$TARGET_USER" ]; then
+        echo -e "${RED}Erreur : impossible de détecter l'utilisateur cible${NC}"
+        echo -e "${YELLOW}Créez un utilisateur non-root ou définissez TARGET_USER manuellement${NC}"
+        exit 1
+    fi
+fi
+
+echo -e "${GREEN}Utilisateur cible détecté : ${TARGET_USER}${NC}"
+
 # Vérifier les dépendances Python
 echo -e "${GREEN}Vérification des dépendances Python...${NC}"
 if [ -f "$PROJECT_DIR/requirements.txt" ]; then
-    pip3 install -r "$PROJECT_DIR/requirements.txt" 2>&1 | grep -v "Requirement already satisfied" || true
+    echo -e "${YELLOW}Installation des dépendances Python...${NC}"
+    
+    # Essayer d'abord les paquets système (recommandé pour Debian/DietPi)
+    echo -e "  ${GREEN}→${NC} Tentative d'installation via apt..."
+    apt update -qq
+    apt install -y python3-flask python3-requests python3-rpi.gpio 2>&1 | grep -v "already" || true
+    
+    # Si certains paquets manquent, essayer pip avec --break-system-packages
+    echo -e "  ${GREEN}→${NC} Vérification des paquets manquants..."
+    if ! python3 -c "import flask" 2>/dev/null || \
+       ! python3 -c "import requests" 2>/dev/null || \
+       ! python3 -c "import RPi.GPIO" 2>/dev/null; then
+        echo -e "  ${YELLOW}→${NC} Installation via pip (--break-system-packages)..."
+        pip3 install --break-system-packages -r "$PROJECT_DIR/requirements.txt" 2>&1 | grep -v "Requirement already satisfied" || true
+    else
+        echo -e "  ${GREEN}✓${NC} Toutes les dépendances sont installées"
+    fi
 else
     echo -e "${YELLOW}Attention : requirements.txt non trouvé${NC}"
 fi
 
-# Vérifier les permissions GPIO pour l'utilisateur pi
+# Vérifier les permissions GPIO pour l'utilisateur cible
 echo -e "${GREEN}Configuration des permissions GPIO...${NC}"
-if ! groups pi | grep -q gpio; then
-    usermod -a -G gpio pi
-    echo -e "${GREEN}✓ Utilisateur 'pi' ajouté au groupe 'gpio'${NC}"
+if ! groups "$TARGET_USER" | grep -q gpio; then
+    usermod -a -G gpio "$TARGET_USER"
+    echo -e "${GREEN}✓ Utilisateur '$TARGET_USER' ajouté au groupe 'gpio'${NC}"
 else
-    echo -e "${GREEN}✓ Utilisateur 'pi' déjà dans le groupe 'gpio'${NC}"
+    echo -e "${GREEN}✓ Utilisateur '$TARGET_USER' déjà dans le groupe 'gpio'${NC}"
 fi
 
-# Copier les fichiers de service
+# Copier les fichiers de service et adapter l'utilisateur
 echo -e "\n${GREEN}Installation des fichiers de service systemd...${NC}"
 
 services=(
@@ -70,7 +106,14 @@ services=(
 for service in "${services[@]}"; do
     if [ -f "$PROJECT_DIR/systemd/${service}.service" ]; then
         echo -e "  ${GREEN}→${NC} Installation de ${service}.service"
-        cp "$PROJECT_DIR/systemd/${service}.service" "$SYSTEMD_DIR/"
+        
+        # Copier et adapter l'utilisateur dans le service webapp
+        if [ "$service" = "tubpi-webapp" ]; then
+            sed "s/User=pi/User=$TARGET_USER/g" "$PROJECT_DIR/systemd/${service}.service" > "$SYSTEMD_DIR/${service}.service"
+        else
+            cp "$PROJECT_DIR/systemd/${service}.service" "$SYSTEMD_DIR/"
+        fi
+        
         chmod 644 "$SYSTEMD_DIR/${service}.service"
     else
         echo -e "  ${RED}✗${NC} Fichier ${service}.service non trouvé"
