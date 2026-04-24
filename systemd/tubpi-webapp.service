@@ -7,6 +7,8 @@ Wants=network-online.target
 Type=simple
 User=pi
 Group=gpio
+# Groupes supplémentaires pour accès GPIO sur Raspberry Pi 5
+SupplementaryGroups=gpio
 WorkingDirectory=/opt/tubpi/src
 Environment="PYTHONUNBUFFERED=1"
 Environment="FLASK_APP=web_app.py"
@@ -19,9 +21,18 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=tubpi-webapp
 
-# Sécurité
+# Sécurité - Autoriser l'accès aux périphériques GPIO
 NoNewPrivileges=true
-PrivateTmp=true
+# PrivateTmp désactivé pour accès aux devices GPIO
+# DeviceAllow pour autoriser explicitement les GPIO (Raspberry Pi 5)
+DeviceAllow=/dev/gpiochip0 rw
+DeviceAllow=/dev/gpiochip1 rw
+DeviceAllow=/dev/gpiochip2 rw
+DeviceAllow=/dev/gpiochip3 rw
+DeviceAllow=/dev/gpiochip4 rw
+# Anciens modèles Pi
+DeviceAllow=/dev/gpiomem rw
+DevicePolicy=closed
 
 [Install]
 WantedBy=multi-user.target

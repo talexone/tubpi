@@ -150,11 +150,76 @@ Vous devriez voir "Motor driver initialisé" au lieu de "Motor driver non dispon
 # Vérifier les permissions
 ls -l /dev/gpiochip*
 
+# Devrait montrer: crw-rw---- 1 root gpio
+# Si le groupe n'est pas gpio:
+sudo chown root:gpio /dev/gpiochip*
+sudo chmod 660 /dev/gpiochip*
+
 # Ajouter l'utilisateur au groupe gpio
 sudo usermod -a -G gpio $USER
 
+# Installer la règle udev pour rendre permanent
+sudo cp systemd/99-gpio.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+
 # Recharger les groupes (déconnexion/reconnexion ou reboot)
 sudo reboot
+```
+
+### Service webapp ne peut pas accéder aux GPIO
+
+Si le service `tubpi-webapp` affiche "Motor driver non disponible" :
+
+**Symptôme**: Le service ONVIF gateway (root) fonctionne mais webapp (utilisateur non-root) ne peut pas accéder aux GPIO.
+
+**Cause**: Restrictions systemd qui bloquent l'accès aux devices GPIO.
+
+**Solution**:
+
+```bash
+# 1. Diagnostic complet
+sudo /opt/tubpi/diagnose_gpio.sh
+
+# 2. Corriger les permissions
+sudo chown root:gpio /dev/gpiochip*
+sudo chmod 660 /dev/gpiochip*
+
+# 3. Installer la règle udev
+sudo cp /opt/tubpi/systemd/99-gpio.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+
+# 4. Mettre à jour le service avec DeviceAllow
+sudo cp /opt/tubpi/systemd/tubpi-webapp.service /etc/systemd/system/
+sudo systemctl daemon-reload
+
+# 5. Redémarrer le service
+sudo systemctl restart tubpi-webapp
+
+# 6. Vérifier les logs
+sudo journalctl -u tubpi-webapp -n 30
+```
+
+Le service webapp nécessite maintenant :
+- User dans le groupe **gpio**
+- **DeviceAllow** pour `/dev/gpiochip*` et `/dev/gpiomem`
+- **DevicePolicy=closed** pour sécurité
+- Pas de **PrivateTmp** qui bloquerait l'accès
+
+Le fichier de service inclut :
+```ini
+[Service]
+User=pi
+Group=gpio
+SupplementaryGroups=gpio
+DeviceAllow=/dev/gpiochip0 rw
+DeviceAllow=/dev/gpiochip1 rw
+DeviceAllow=/dev/gpiochip2 rw
+DeviceAllow=/dev/gpiochip3 rw
+DeviceAllow=/dev/gpiochip4 rw
+DeviceAllow=/dev/gpiomem rw
+DevicePolicy=closed
 ```
 
 ### Le service démarre mais le moteur n'est pas disponible

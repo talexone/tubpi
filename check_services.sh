@@ -99,7 +99,6 @@ echo ""
 
 # Vérification GPIO
 echo -e "${BLUE}=== Vérification GPIO ===${NC}\n"
-echo -e "${YELLOW}Permissions GPIO${NC}"
 
 # Détecter l'utilisateur non-root
 TARGET_USER=""
@@ -114,6 +113,7 @@ else
     done
 fi
 
+echo -e "${YELLOW}Permissions GPIO${NC}"
 if [ -n "$TARGET_USER" ]; then
     if groups "$TARGET_USER" | grep -q gpio; then
         echo -e "  ${GREEN}✓${NC} Utilisateur '$TARGET_USER' dans le groupe 'gpio'"
@@ -124,6 +124,38 @@ if [ -n "$TARGET_USER" ]; then
 else
     echo -e "  ${YELLOW}○${NC} Impossible de détecter l'utilisateur non-root"
 fi
+
+# Vérifier les devices GPIO
+if ls /dev/gpiochip* &>/dev/null 2>&1; then
+    echo -e "${YELLOW}Devices GPIO (Raspberry Pi 5)${NC}"
+    all_gpio_ok=true
+    for dev in /dev/gpiochip*; do
+        group=$(ls -l "$dev" | awk '{print $4}')
+        if [ "$group" = "gpio" ]; then
+            echo -e "  ${GREEN}✓${NC} $dev (groupe: gpio)"
+        else
+            echo -e "  ${RED}✗${NC} $dev (groupe: $group - devrait être gpio)"
+            all_gpio_ok=false
+        fi
+    done
+    if [ "$all_gpio_ok" = false ]; then
+        echo -e "  ${YELLOW}→${NC} Corriger : sudo chown root:gpio /dev/gpiochip* && sudo chmod 660 /dev/gpiochip*"
+        echo -e "  ${YELLOW}→${NC} Installer règle udev : sudo cp /opt/tubpi/systemd/99-gpio.rules /etc/udev/rules.d/"
+    fi
+elif [ -e /dev/gpiomem ]; then
+    echo -e "${YELLOW}Device GPIO (Raspberry Pi < 5)${NC}"
+    group=$(ls -l /dev/gpiomem | awk '{print $4}')
+    if [ "$group" = "gpio" ]; then
+        echo -e "  ${GREEN}✓${NC} /dev/gpiomem (groupe: gpio)"
+    else
+        echo -e "  ${RED}✗${NC} /dev/gpiomem (groupe: $group - devrait être gpio)"
+        echo -e "  ${YELLOW}→${NC} Corriger : sudo chown root:gpio /dev/gpiomem && sudo chmod 660 /dev/gpiomem"
+    fi
+fi
+
+# Diagnostic détaillé disponible
+echo -e "\n${BLUE}Pour un diagnostic complet :${NC}"
+echo -e "  ${GREEN}sudo /opt/tubpi/diagnose_gpio.sh${NC}"
 echo ""
 
 # Vérification dépendances Python
