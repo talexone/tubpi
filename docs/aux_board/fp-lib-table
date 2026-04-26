@@ -1,0 +1,4 @@
+(fp_lib_table
+	(version 7)
+	(lib (name "optek") (type "KiCad") (uri "D:/Projects/AI/tubpi/docs/optek/optek.pretty") (options "") (descr ""))
+)
