@@ -20,7 +20,12 @@ def init_motor():
                 print('GPIO non disponible : vérifiez que le programme est exécuté sur un Raspberry Pi avec accès aux GPIO.')
                 motor = None
         except Exception as exc:
-            print(f'GPIO non disponible: {exc}')
+            # Si GPIO busy, c'est probablement onvif-gateway qui gère le moteur
+            if 'GPIO busy' in str(exc):
+                print(f'GPIO déjà utilisé par un autre service (probablement onvif-gateway): {exc}')
+                print('Le contrôle moteur se fait via le service onvif-gateway.')
+            else:
+                print(f'GPIO non disponible: {exc}')
             motor = None
 
     if camera is None:
@@ -81,8 +86,9 @@ def status():
     if motor is None:
         return jsonify({
             'available': False,
-            'message': 'GPIO non disponible'
-        }), 503
+            'message': 'Contrôle moteur géré par le service onvif-gateway (port 80)',
+            'hint': 'Les commandes moteur se font via ONVIF ou le service onvif-gateway'
+        }), 200
     
     try:
         limit_status = motor.get_limit_switches_status()
