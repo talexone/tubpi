@@ -8,12 +8,25 @@
       body { font-family: Arial, sans-serif; background: #f7f7f7; color: #222; margin: 0; padding: 20px; }
       .container { max-width: 640px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
       h1 { margin-top: 0; }
+      h3 { margin: 16px 0 8px 0; color: #555; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
       .buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 18px 0; }
       .buttons button:nth-child(7) { grid-column: 1 / -1; }
-      button { padding: 16px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
+      .step-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 18px 0; }
+      button { padding: 16px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
       button.primary { background: #1f7ef1; color: #fff; }
+      button.primary:hover:not(:disabled) { background: #1565c0; }
       button.secondary { background: #e0e0e0; color: #222; }
+      button.secondary:hover:not(:disabled) { background: #d0d0d0; }
       button.danger { background: #e14f4f; color: #fff; }
+      button.danger:hover:not(:disabled) { background: #c62828; }
+      button.step { background: #9c27b0; color: #fff; }
+      button.step:hover:not(:disabled) { background: #7b1fa2; }
+      button.step.active { background: #4a148c; animation: pulse 1s ease-in-out; }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
       .status { margin-top: 18px; padding: 14px; background: #f3f8ff; border: 1px solid #d7e6ff; border-radius: 8px; }
       .encoder-panel { margin-top: 18px; padding: 16px; background: #f0f9f4; border: 1px solid #c6e6d4; border-radius: 8px; }
       .encoder-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; }
@@ -35,6 +48,7 @@
       <h1>Page de test - Tubpi</h1>
       <p>Utilisez les boutons pour envoyer des commandes de mouvement au rail.</p>
 
+      <h3>🎮 Contrôle continu</h3>
       <div class="buttons">
         <button class="primary" onclick="sendMove('forward')">Avancer</button>
         <button class="primary" onclick="sendMove('backward')">Reculer</button>
@@ -43,6 +57,12 @@
         <button class="danger" onclick="sendMove('focus_plus')">Focus +</button>
         <button class="danger" onclick="sendMove('focus_minus')">Focus -</button>
         <button class="secondary" onclick="resetEncoder()">Réinit. Position</button>
+      </div>
+
+      <h3>⏱️ Mouvement par pas (1 seconde)</h3>
+      <div class="step-buttons">
+        <button class="step" id="step-forward" onclick="sendMoveStep('forward')">▶ Pas avant</button>
+        <button class="step" id="step-backward" onclick="sendMoveStep('backward')">◀ Pas arrière</button>
       </div>
 
       <div class="encoder-panel">
@@ -136,6 +156,50 @@
           responseBox.textContent = JSON.stringify(result, null, 2);
         } catch (error) {
           responseBox.textContent = `Erreur réseau : ${error.message}`;
+        }
+      }
+      async function sendMoveStep(direction) {
+        const buttonId = `step-${direction}`;
+        const button = document.getElementById(buttonId);
+        
+        // Désactiver le bouton pendant l'opération
+        button.disabled = true;
+        button.classList.add('active');
+        
+        try {
+          // 1. Démarrer le mouvement
+          responseBox.textContent = `Mouvement par pas: ${direction}...`;
+          const startRes = await fetch('/move', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ direction })
+          });
+
+          if (!startRes.ok) {
+            const error = await startRes.json();
+            responseBox.textContent = `Erreur ${startRes.status}: ${error.error || JSON.stringify(error)}`;
+            return;
+          }
+
+          // 2. Attendre 1 seconde
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // 3. Arrêter le mouvement
+          const stopRes = await fetch('/move', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ direction: 'stop' })
+          });
+
+          const result = await stopRes.json();
+          responseBox.textContent = `Pas ${direction} terminé\n` + JSON.stringify(result, null, 2);
+          
+        } catch (error) {
+          responseBox.textContent = `Erreur réseau : ${error.message}`;
+        } finally {
+          // Réactiver le bouton
+          button.disabled = false;
+          button.classList.remove('active');
         }
       }
       async function resetEncoder() {
