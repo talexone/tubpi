@@ -61,14 +61,14 @@
       <div class="video-panel">
         <div class="video-container">
           <video id="videoPlayer" controls autoplay muted>
-            <source src="rtsp://192.168.66.212:554/" type="application/x-rtsp">
+            <source id="videoSource" src="" type="application/x-rtsp">
             Votre navigateur ne supporte pas la lecture RTSP directe.
           </video>
         </div>
         <div class="video-info">
-          <strong>URL RTSP:</strong> <code id="rtsp-url">rtsp://192.168.66.212:554/</code>
+          <strong>URL RTSP:</strong> <code id="rtsp-url">Chargement...</code>
           <a href="#" onclick="copyRtspUrl(); return false;">📋 Copier</a>
-          <a href="vlc://rtsp://192.168.66.212:554/">🎬 Ouvrir dans VLC</a>
+          <a id="vlc-link" href="#">🎬 Ouvrir dans VLC</a>
           <div class="vlc-note">
             ⚠️ <strong>Note:</strong> Les navigateurs web ne supportent pas nativement le RTSP. 
             Pour voir le flux vidéo, cliquez sur "Ouvrir dans VLC" ou copiez l'URL et ouvrez-la dans VLC (Média → Ouvrir un flux réseau).
@@ -134,6 +134,36 @@
       const limitForwardEl = document.getElementById('limit-forward');
       const limitBackwardEl = document.getElementById('limit-backward');
 
+      // RTSP URL configuration
+      let rtspUrl = '';
+      let rtspDisplayUrl = '';
+
+      // Load RTSP URL on page load
+      (async function loadRtspUrl() {
+        try {
+          const response = await fetch('/camera/rtsp-url');
+          if (response.ok) {
+            const data = await response.json();
+            rtspUrl = data.url;
+            rtspDisplayUrl = data.display_url;
+            
+            // Update UI
+            document.getElementById('rtsp-url').textContent = rtspDisplayUrl;
+            document.getElementById('videoSource').src = rtspUrl;
+            document.getElementById('vlc-link').href = data.vlc_url;
+            
+            // Reload video element to apply new source
+            const video = document.getElementById('videoPlayer');
+            video.load();
+          } else {
+            document.getElementById('rtsp-url').textContent = 'Erreur: Impossible de charger l\'URL';
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement de l\'URL RTSP:', error);
+          document.getElementById('rtsp-url').textContent = 'Erreur réseau';
+        }
+      })();
+
       // Update encoder values in real-time
       async function updateEncoderData() {
         try {
@@ -168,7 +198,7 @@
       updateEncoderData();
 
       function copyRtspUrl() {
-        const url = document.getElementById('rtsp-url').textContent;
+        const url = rtspUrl || document.getElementById('rtsp-url').textContent;
         navigator.clipboard.writeText(url).then(() => {
           alert('URL RTSP copiée: ' + url + '\n\nOuvrez cette URL dans VLC (Média → Ouvrir un flux réseau)');
         }).catch(err => {

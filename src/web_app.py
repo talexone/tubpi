@@ -218,5 +218,40 @@ def shutdown():
     motor.cleanup()
     return jsonify({'message': 'GPIO nettoyés, moteur arrêté'})
 
+@app.route('/camera/rtsp-url', methods=['GET'])
+def get_rtsp_url():
+    """Retourne l'URL RTSP complète avec credentials."""
+    try:
+        # Lire les credentials depuis camera.res
+        with open('/opt/tubpi/camera.res', 'r') as f:
+            creds = {}
+            for line in f:
+                line = line.strip()
+                if '=' in line and not line.startswith('#'):
+                    key, value = line.split('=', 1)
+                    creds[key.strip()] = value.strip()
+            username = creds.get('user', 'admin')
+            password = creds.get('password', '')
+    except Exception as exc:
+        return jsonify({
+            'error': 'Impossible de lire les credentials',
+            'details': str(exc)
+        }), 500
+    
+    # Configuration caméra
+    camera_ip = '192.168.1.108'
+    camera_port = 554
+    camera_path = '/cam/realmonitor?channel=1&subtype=1'
+    
+    # Construire l'URL RTSP avec authentification
+    rtsp_url = f'rtsp://{username}:{password}@{camera_ip}:{camera_port}{camera_path}'
+    rtsp_url_display = f'rtsp://{username}:****@{camera_ip}:{camera_port}{camera_path}'
+    
+    return jsonify({
+        'url': rtsp_url,
+        'display_url': rtsp_url_display,
+        'vlc_url': f'vlc://{rtsp_url}'
+    })
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
