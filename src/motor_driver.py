@@ -53,9 +53,11 @@ class MotorDriver:
 
         try:
             GPIO.setmode(GPIO.BCM)
-            GPIO.setup(self.forward_pin, GPIO.OUT)
-            GPIO.setup(self.backward_pin, GPIO.OUT)
-            GPIO.setup(self._pwm_pin, GPIO.OUT)
+            # Spécifier initial=GPIO.LOW pour éviter le bug rpi-lgpio sur Pi 5
+            # qui essaie de lire l'état avant allocation
+            GPIO.setup(self.forward_pin, GPIO.OUT, initial=GPIO.LOW)
+            GPIO.setup(self.backward_pin, GPIO.OUT, initial=GPIO.LOW)
+            GPIO.setup(self._pwm_pin, GPIO.OUT, initial=GPIO.LOW)
             
             # Configuration des capteurs de fin de course
             # Pull-up interne : HIGH quand libre, LOW quand déclenché
