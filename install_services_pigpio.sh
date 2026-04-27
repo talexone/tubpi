@@ -93,13 +93,28 @@ if [ -f "$PROJECT_DIR/requirements.txt" ]; then
     apt update -qq
     
     if [ "$USE_PIGPIO" = true ]; then
-        # Installation pigpio
-        apt install -y python3-flask python3-requests python3-pigpio pigpio 2>&1 | grep -v "already" || true
+        # Installation pigpio (nécessite compilation)
+        echo -e "  ${GREEN}→${NC} Installation des dépendances de compilation..."
+        apt install -y python3-flask python3-requests python3-dev python3-pip gcc make 2>&1 | grep -v "already" || true
         
-        # Vérifier si pigpiod est disponible
-        if ! systemctl list-unit-files | grep -q pigpiod.service; then
-            echo -e "  ${YELLOW}⚠${NC} Service pigpiod non trouvé, création manuelle..."
-            # Le paquet pigpio devrait l'installer, mais on vérifie
+        echo -e "  ${GREEN}→${NC} Installation de pigpio via pip (compilation depuis sources)..."
+        pip3 install --break-system-packages pigpio 2>&1 | grep -E "(Successfully installed|Requirement already satisfied)" || true
+        
+        # Vérifier si pigpiod existe
+        if ! command -v pigpiod &>/dev/null; then
+            echo -e "  ${YELLOW}⚠${NC} Daemon pigpiod non trouvé, installation manuelle..."
+            
+            # Télécharger et compiler pigpio
+            cd /tmp
+            rm -rf pigpio
+            wget https://github.com/joan2937/pigpio/archive/master.zip -O pigpio.zip
+            unzip -q pigpio.zip
+            cd pigpio-master
+            make
+            make install
+            cd /
+            rm -rf /tmp/pigpio /tmp/pigpio.zip
+            echo -e "  ${GREEN}✓${NC} pigpiod installé depuis les sources"
         fi
     else
         # Installation rpi-lgpio
@@ -141,16 +156,52 @@ fi
 if [ "$USE_PIGPIO" = true ]; then
     echo -e "\n${GREEN}Configuration du daemon pigpiod...${NC}"
     
+    # Créer le service systemd si nécessaire
+    if ! systemctl list-unit-files | grep -q pigpiod.service; then
+        echo -e "  ${YELLOW}→${NC} Création du service systemd pour pigpiod..."
+        cat > /etc/systemd/system/pigpiod.service << 'EOF'
+[Unit]
+Description=Pigpio daemon
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/pigpiod -l
+ExecStop=/bin/systemctl kill pigpiod
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        systemctl daemon-reload
+        echo -e "  ${GREEN}✓${NC} Service pigpiod créé"
+    fi
+    
     # Activer et démarrer pigpiod
     systemctl enable pigpiod.service
     systemctl start pigpiod.service
+    
+    # Attendre un peu que le daemon démarre
+    sleep 2
     
     # Vérifier que le daemon est actif
     if systemctl is-active --quiet pigpiod.service; then
         echo -e "  ${GREEN}✓${NC} Daemon pigpiod actif"
     else
         echo -e "  ${RED}✗${NC} Daemon pigpiod non actif"
-        echo -e "  ${YELLOW}→${NC} Vérifier : sudo systemctl status pigpiod"
+        echo -e "  ${YELLOW}→${NC} Tentative de démarrage manuel..."
+        
+        # Essayer de démarrer manuellement
+        /usr/local/bin/pigpiod -l 2>/dev/null || /usr/bin/pigpiod -l 2>/dev/null || true
+        sleep 1
+        
+        if pgrep pigpiod >/dev/null; then
+            echo -e "  ${GREEN}✓${NC} Daemon pigpiod démarré manuellement"
+        else
+            echo -e "  ${RED}✗${NC} Impossible de démarrer pigpiod"
+            echo -e "  ${YELLOW}→${NC} Vérifier : sudo systemctl status pigpiod"
+            echo -e "  ${YELLOW}→${NC} Logs : sudo journalctl -u pigpiod -n 50"
+        fi
     fi
     
     # Créer un lien symbolique pour utiliser motor_driver_pigpio
