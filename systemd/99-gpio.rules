@@ -1,0 +1,12 @@
+# udev rule pour GPIO Raspberry Pi 5
+# Place ce fichier dans /etc/udev/rules.d/99-gpio.rules
+# Puis: sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# Raspberry Pi 5 - gpiochip devices
+SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"
+
+# Anciens modèles Pi - gpiomem
+SUBSYSTEM=="bcm2835-gpiomem", KERNEL=="gpiomem", GROUP="gpio", MODE="0660"
+
+# Character devices pour GPIO
+KERNEL=="gpiochip[0-9]*", GROUP="gpio", MODE="0660"

@@ -7,12 +7,22 @@ Wants=network-online.target
 Type=simple
 User=pi
 Group=gpio
+SupplementaryGroups=gpio
 WorkingDirectory=/opt/tubpi/src
 Environment="PYTHONUNBUFFERED=1"
 Environment="FLASK_APP=web_app.py"
 ExecStart=/usr/bin/python3 /opt/tubpi/src/web_app.py
 Restart=always
 RestartSec=10
+
+# Permissions GPIO pour Raspberry Pi 5
+DeviceAllow=/dev/gpiochip0 rw
+DeviceAllow=/dev/gpiochip1 rw
+DeviceAllow=/dev/gpiochip2 rw
+DeviceAllow=/dev/gpiochip3 rw
+DeviceAllow=/dev/gpiochip4 rw
+DeviceAllow=/dev/gpiomem rw
+DevicePolicy=closed
 
 # Logs
 StandardOutput=journal
@@ -21,7 +31,6 @@ SyslogIdentifier=tubpi-webapp
 
 # Sécurité
 NoNewPrivileges=true
-PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target

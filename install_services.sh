@@ -105,6 +105,33 @@ else
     echo -e "${GREEN}✓ Utilisateur '$TARGET_USER' déjà dans le groupe 'gpio'${NC}"
 fi
 
+# Configuration des permissions GPIO pour Raspberry Pi 5
+echo -e "${GREEN}Configuration des permissions GPIO (Raspberry Pi 5)...${NC}"
+if [ -f "$PROJECT_DIR/systemd/99-gpio.rules" ]; then
+    cp "$PROJECT_DIR/systemd/99-gpio.rules" /etc/udev/rules.d/
+    echo -e "  ${GREEN}✓${NC} Règle udev GPIO installée"
+    
+    # Recharger les règles udev
+    udevadm control --reload-rules 2>/dev/null || true
+    udevadm trigger 2>/dev/null || true
+    echo -e "  ${GREEN}✓${NC} Règles udev rechargées"
+else
+    echo -e "  ${YELLOW}○${NC} Fichier 99-gpio.rules non trouvé"
+fi
+
+# Vérifier et corriger les permissions des devices GPIO
+if [ -e /dev/gpiochip0 ]; then
+    chown root:gpio /dev/gpiochip* 2>/dev/null || true
+    chmod 660 /dev/gpiochip* 2>/dev/null || true
+    echo -e "  ${GREEN}✓${NC} Permissions /dev/gpiochip* configurées"
+fi
+
+if [ -e /dev/gpiomem ]; then
+    chown root:gpio /dev/gpiomem 2>/dev/null || true
+    chmod 660 /dev/gpiomem 2>/dev/null || true
+    echo -e "  ${GREEN}✓${NC} Permissions /dev/gpiomem configurées"
+fi
+
 # Copier les fichiers de service et adapter l'utilisateur
 echo -e "\n${GREEN}Installation des fichiers de service systemd...${NC}"
 
