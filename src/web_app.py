@@ -1,5 +1,6 @@
 """Application web minimale pour contrôler le rail de caméra."""
 
+import requests
 from flask import Flask, jsonify, request, render_template
 from motor_driver import MotorDriver
 from camera_onvif import CameraOnvif
@@ -79,22 +80,45 @@ def move():
 
 @app.route('/status', methods=['GET'])
 def status():
-    """Retourne l'état actuel du système."""
+    """Retourne l'état actuel du système.
+    
+    Si le moteur n'est pas disponible localement (géré par onvif-gateway),
+    récupère les informations depuis l'API du service onvif-gateway.
+    """
     if motor is None:
         init_motor()
     
+    # Si motor est None, on essaie de récupérer les infos depuis onvif-gateway
     if motor is None:
-        return jsonify({
-            'available': False,
-            'message': 'Contrôle moteur géré par le service onvif-gateway (port 80)',
-            'hint': 'Les commandes moteur se font via ONVIF ou le service onvif-gateway'
-        }), 200
+        try:
+            # onvif-gateway tourne sur port 80 en local
+            response = requests.get('http://localhost/api/motor/status', timeout=2)
+            if response.status_code == 200:
+                data = response.json()
+                data['source'] = 'onvif-gateway'
+                return jsonify(data)
+            else:
+                return jsonify({
+                    'available': False,
+                    'message': 'Contrôle moteur géré par le service onvif-gateway (port 80)',
+                    'hint': 'Les commandes moteur se font via ONVIF ou le service onvif-gateway',
+                    'error': f'Erreur API onvif-gateway: {response.status_code}'
+                }), 200
+        except Exception as exc:
+            return jsonify({
+                'available': False,
+                'message': 'Contrôle moteur géré par le service onvif-gateway (port 80)',
+                'hint': 'Les commandes moteur se font via ONVIF ou le service onvif-gateway',
+                'error': f'Impossible de contacter onvif-gateway: {exc}'
+            }), 200
     
+    # Si motor est disponible localement, on l'utilise directement
     try:
         limit_status = motor.get_limit_switches_status()
         encoder_stats = motor.get_encoder_stats()
         return jsonify({
             'available': True,
+            'source': 'local',
             'limit_switches': limit_status,
             'can_move_forward': motor.can_move_forward(),
             'can_move_backward': motor.can_move_backward(),
@@ -105,18 +129,39 @@ def status():
 
 @app.route('/encoder', methods=['GET'])
 def encoder_info():
-    """Retourne les informations détaillées de l'encodeur."""
+    """Retourne les informations détaillées de l'encodeur.
+    
+    Si le moteur n'est pas disponible localement, récupère depuis onvif-gateway.
+    """
     if motor is None:
         init_motor()
     
+    # Si motor est None, récupérer depuis onvif-gateway
     if motor is None:
-        return jsonify({
-            'available': False,
-            'message': 'GPIO non disponible'
-        }), 503
+        try:
+            response = requests.get('http://localhost/api/motor/encoder', timeout=2)
+            if response.status_code == 200:
+                data = response.json()
+                data['source'] = 'onvif-gateway'
+                return jsonify(data)
+            else:
+                return jsonify({
+                    'available': False,
+                    'message': 'Encodeur géré par le service onvif-gateway',
+                    'error': f'Erreur API: {response.status_code}'
+                }), 503
+        except Exception as exc:
+            return jsonify({
+                'available': False,
+                'message': 'Encodeur non disponible',
+                'error': str(exc)
+            }), 503
     
+    # Sinon utiliser motor local
     try:
-        return jsonify(motor.get_encoder_stats())
+        stats = motor.get_encoder_stats()
+        stats['source'] = 'local'
+        return jsonify(stats)
     except Exception as exc:
         return jsonify({'error': str(exc)}), 500
 

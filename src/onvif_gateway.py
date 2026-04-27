@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import http.server
+import json
 import logging
 import os
 import re
@@ -451,6 +452,50 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
 
         return response
 
+    def _send_json_response(self, data, status_code=200):
+        """Envoie une réponse JSON."""
+        json_data = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(json_data)))
+        self.send_header('Access-Control-Allow-Origin', '*')  # Pour permettre l'accès depuis webapp
+        self.end_headers()
+        self.wfile.write(json_data)
+    
+    def _get_motor_status(self):
+        """Retourne l'état complet du moteur."""
+        if not motor.is_available():
+            return {
+                'available': False,
+                'message': 'Moteur non disponible'
+            }
+        
+        try:
+            limit_status = motor.get_limit_switches_status()
+            encoder_stats = motor.get_encoder_stats()
+            return {
+                'available': True,
+                'limit_switches': limit_status,
+                'can_move_forward': motor.can_move_forward(),
+                'can_move_backward': motor.can_move_backward(),
+                'encoder': encoder_stats
+            }
+        except Exception as exc:
+            return {'error': str(exc)}
+    
+    def _get_encoder_info(self):
+        """Retourne les informations détaillées de l'encodeur."""
+        if not motor.is_available():
+            return {
+                'available': False,
+                'message': 'Moteur non disponible'
+            }
+        
+        try:
+            return motor.get_encoder_stats()
+        except Exception as exc:
+            return {'error': str(exc)}
+    
     def _intercept_focus(self, body):
         direction = _get_focus_direction(body)
         if direction is None:
@@ -481,6 +526,18 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
         logging.info('Received GET %s', self.path)
         if debug_mode:
             logging.debug('GET headers: %s', dict(self.headers))
+        
+        # API endpoints pour les stats du moteur
+        if self.path == '/api/motor/status':
+            self._send_json_response(self._get_motor_status())
+            return
+        elif self.path == '/api/motor/encoder':
+            self._send_json_response(self._get_encoder_info())
+            return
+        elif self.path.startswith('/api/'):
+            self._send_json_response({'error': 'Endpoint non trouvé'}, 404)
+            return
+        
         response = self._proxy_request()
         if response is None:
             return
