@@ -33,6 +33,7 @@ Thumbs.db
 config.local.py
 *.local.sh
 config.env
+camera.res
 
 # Systemd (installed versions)
 # Keep systemd/*.service in repo, but ignore if copied elsewhere

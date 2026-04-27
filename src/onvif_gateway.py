@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import http.server
 import logging
+import os
 import re
 import socket
 import socketserver
@@ -19,11 +20,49 @@ from requests.auth import HTTPDigestAuth, HTTPBasicAuth
 
 from motor_driver import MotorDriver
 
+# Configuration de la caméra
 CAMERA_HOST = '192.168.1.108'
 CAMERA_PORT = 80
 CAMERA_URL = f'http://{CAMERA_HOST}:{CAMERA_PORT}'
-CAMERA_USER = 'admin'
-CAMERA_PASSWORD = 'Tialys1489'
+
+def load_camera_credentials(config_file='/opt/tubpi/camera.res'):
+    """Charge les credentials depuis le fichier de configuration.
+    
+    Format attendu:
+        user=<username>
+        password=<password>
+    
+    Returns:
+        tuple: (username, password)
+    """
+    try:
+        credentials = {}
+        with open(config_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    credentials[key.strip()] = value.strip()
+        
+        username = credentials.get('user', 'admin')
+        password = credentials.get('password', '')
+        
+        if not password:
+            logging.warning(f"Mot de passe vide dans {config_file}")
+        
+        return username, password
+    except FileNotFoundError:
+        logging.error(f"Fichier de configuration {config_file} introuvable")
+        logging.error(f"Créez le fichier avec: user=<username>\\npassword=<password>")
+        raise
+    except Exception as e:
+        logging.error(f"Erreur lors de la lecture de {config_file}: {e}")
+        raise
+
+# Charger les credentials depuis le fichier
+CAMERA_USER, CAMERA_PASSWORD = load_camera_credentials()
 
 MOTOR_FORWARD_PIN = 20
 MOTOR_BACKWARD_PIN = 21
@@ -35,9 +74,11 @@ _DEVICE_UUID = str(uuid.uuid4())  # stable for the lifetime of the process
 
 debug_mode = False
 test_mode = False
-_proxy_auth = HTTPDigestAuth(CAMERA_USER, CAMERA_PASSWORD)
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+logging.info(f'Connexion à la caméra: {CAMERA_USER}@{CAMERA_HOST}:{CAMERA_PORT}')
+
+_proxy_auth = HTTPDigestAuth(CAMERA_USER, CAMERA_PASSWORD)
 
 motor = MotorDriver(forward_pin=MOTOR_FORWARD_PIN, backward_pin=MOTOR_BACKWARD_PIN)
 if motor.is_available():

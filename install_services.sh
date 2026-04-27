@@ -132,6 +132,43 @@ if [ -e /dev/gpiomem ]; then
     echo -e "  ${GREEN}✓${NC} Permissions /dev/gpiomem configurées"
 fi
 
+# Configuration des credentials de la caméra
+echo -e "\n${GREEN}Configuration des credentials de la caméra...${NC}"
+if [ ! -f "$PROJECT_DIR/camera.res" ]; then
+    echo -e "${YELLOW}Le fichier camera.res n'existe pas.${NC}"
+    echo -e "${YELLOW}Ce fichier contient les identifiants pour accéder à la caméra ONVIF.${NC}"
+    echo -e ""
+    read -p "Nom d'utilisateur de la caméra [admin]: " camera_user
+    camera_user=${camera_user:-admin}
+    
+    read -s -p "Mot de passe de la caméra: " camera_password
+    echo ""
+    
+    if [ -z "$camera_password" ]; then
+        echo -e "${RED}Erreur: Le mot de passe ne peut pas être vide${NC}"
+        exit 1
+    fi
+    
+    # Créer le fichier camera.res
+    cat > "$PROJECT_DIR/camera.res" << EOF
+# Configuration des credentials de la caméra ONVIF
+# Généré automatiquement par install_services.sh
+
+user=$camera_user
+password=$camera_password
+EOF
+    
+    chmod 600 "$PROJECT_DIR/camera.res"
+    chown root:root "$PROJECT_DIR/camera.res"
+    echo -e "  ${GREEN}✓${NC} Fichier camera.res créé"
+else
+    echo -e "  ${GREEN}✓${NC} Fichier camera.res déjà existant"
+    # Vérifier les permissions
+    chmod 600 "$PROJECT_DIR/camera.res"
+    chown root:root "$PROJECT_DIR/camera.res"
+    echo -e "  ${GREEN}✓${NC} Permissions camera.res configurées (600, root:root)"
+fi
+
 # Copier les fichiers de service et adapter l'utilisateur
 echo -e "\n${GREEN}Installation des fichiers de service systemd...${NC}"
 

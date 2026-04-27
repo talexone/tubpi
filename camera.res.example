@@ -1,0 +1,9 @@
+# Configuration des credentials de la caméra ONVIF
+# Ce fichier doit être copié vers /opt/tubpi/camera.res
+# et édité avec vos identifiants réels
+
+# Nom d'utilisateur de la caméra
+user=admin
+
+# Mot de passe de la caméra
+password=VotreMotDePasse
