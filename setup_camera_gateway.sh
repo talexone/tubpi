@@ -9,16 +9,16 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-ETH0_ADDR=192.168.11.28
+ETH0_ADDR=192.168.66.212
 CAMERA_ADDR=192.168.1.108
 
 cat <<'EOF'
 Configuration de la passerelle caméra :
-- RPi eth0 = 192.168.11.28
+- RPi eth0 = 192.168.66.212
 - RPi eth1 = 192.168.1.30
 - Caméra = 192.168.1.108
 
-L'objectif : accéder à la caméra depuis le réseau 192.168.11.0/24 via 192.168.11.28.
+L'objectif : accéder à la caméra depuis le réseau 192.168.66.0/24 via 192.168.66.212.
 EOF
 
 echo "Activation du routage IP..."
@@ -30,20 +30,20 @@ EOF
 fi
 
 # Vidage des règles existantes de forwarding si elles existent déjà
-iptables -D FORWARD -i eth0 -o eth1 -s 192.168.11.0/24 -d 192.168.1.0/24 -j ACCEPT 2>/dev/null || true
+iptables -D FORWARD -i eth0 -o eth1 -s 192.168.66.0/24 -d 192.168.1.0/24 -j ACCEPT 2>/dev/null || true
 iptables -D FORWARD -i eth1 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
 iptables -t nat -D PREROUTING -d ${ETH0_ADDR} -p tcp --dport 554 -j DNAT --to-destination ${CAMERA_ADDR}:554 2>/dev/null || true
 iptables -t nat -D PREROUTING -d ${ETH0_ADDR} -p udp --dport 554 -j DNAT --to-destination ${CAMERA_ADDR}:554 2>/dev/null || true
 iptables -t nat -D PREROUTING -d ${ETH0_ADDR} -p tcp --dport 81 -j DNAT --to-destination ${CAMERA_ADDR}:80 2>/dev/null || true
-iptables -t nat -D POSTROUTING -s 192.168.11.0/24 -d 192.168.1.0/24 -j MASQUERADE 2>/dev/null || true
+iptables -t nat -D POSTROUTING -s 192.168.66.0/24 -d 192.168.1.0/24 -j MASQUERADE 2>/dev/null || true
 
 echo "Ajout des règles de routage NAT..."
-iptables -A FORWARD -i eth0 -o eth1 -s 192.168.11.0/24 -d 192.168.1.0/24 -j ACCEPT
+iptables -A FORWARD -i eth0 -o eth1 -s 192.168.66.0/24 -d 192.168.1.0/24 -j ACCEPT
 iptables -A FORWARD -i eth1 -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 iptables -t nat -A PREROUTING -d ${ETH0_ADDR} -p tcp --dport 554 -j DNAT --to-destination ${CAMERA_ADDR}:554
 iptables -t nat -A PREROUTING -d ${ETH0_ADDR} -p udp --dport 554 -j DNAT --to-destination ${CAMERA_ADDR}:554
 iptables -t nat -A PREROUTING -d ${ETH0_ADDR} -p tcp --dport 81 -j DNAT --to-destination ${CAMERA_ADDR}:80
-iptables -t nat -A POSTROUTING -s 192.168.11.0/24 -d 192.168.1.0/24 -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 192.168.66.0/24 -d 192.168.1.0/24 -j MASQUERADE
 
 cat <<EOF
 Passerelle configurée.
