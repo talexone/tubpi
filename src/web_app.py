@@ -37,14 +37,6 @@ def init_motor():
 def index():
     return render_template('test.html')
 
-@app.before_request
-def check_motor_available():
-    if request.endpoint == 'move':
-        init_motor()
-        print(f'check_motor_available: endpoint={request.endpoint}, motor={"available" if motor else "unavailable"}')
-        if motor is None:
-            return jsonify({'error': 'GPIO non disponible ou pas exécuté sur Raspberry Pi'}), 503
-
 @app.route('/move', methods=['POST'])
 def move():
     print('move')
@@ -54,9 +46,42 @@ def move():
     if direction not in ('forward', 'backward', 'stop', 'calibrate', 'focus_plus', 'focus_minus'):
         return jsonify({'error': 'direction invalide'}), 400
 
+    # Initialiser le moteur si pas déjà fait
     if motor is None:
-        return jsonify({'error': 'GPIO non disponible ou pas exécuté sur Raspberry Pi'}), 503
+        init_motor()
+    
+    # Si motor est None (géré par onvif-gateway), déléguer à l'API
+    if motor is None:
+        # Pour les commandes focus, ne pas déléguer (elles passent par ONVIF)
+        if direction in ('focus_plus', 'focus_minus'):
+            return jsonify({
+                'error': 'Commandes focus disponibles uniquement via ONVIF',
+                'hint': 'Utilisez un client ONVIF pour contrôler le focus'
+            }), 503
+        
+        # Déléguer les commandes moteur à onvif-gateway
+        if direction in ('forward', 'backward', 'stop', 'calibrate'):
+            try:
+                response = requests.post(
+                    'http://localhost/api/motor/move',
+                    json={'direction': direction},
+                    timeout=5
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    data['source'] = 'onvif-gateway'
+                    return jsonify(data)
+                else:
+                    return jsonify({
+                        'error': f'Erreur API onvif-gateway: {response.status_code}',
+                        'details': response.text
+                    }), response.status_code
+            except Exception as exc:
+                return jsonify({
+                    'error': f'Impossible de contacter onvif-gateway: {exc}'
+                }), 503
 
+    # Si motor est disponible localement, l'utiliser directement
     try:
         if direction == 'forward':
             motor.move_forward()
@@ -66,17 +91,19 @@ def move():
             motor.stop()
         elif direction == 'calibrate':
             result = motor.calibrate()
-            return jsonify({'direction': direction, 'result': result})
+            return jsonify({'direction': direction, 'result': result, 'source': 'local'})
         elif direction == 'focus_plus':
             result = camera.focus_plus()
+            result['source'] = 'local'
             return jsonify(result)
         elif direction == 'focus_minus':
             result = camera.focus_minus()
+            result['source'] = 'local'
             return jsonify(result)
     except Exception as exc:
         return jsonify({'error': str(exc)}), 500
 
-    return jsonify({'direction': direction})
+    return jsonify({'direction': direction, 'source': 'local'})
 
 @app.route('/status', methods=['GET'])
 def status():

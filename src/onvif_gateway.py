@@ -452,6 +452,36 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
 
         return response
 
+    def _execute_motor_command(self, direction):
+        """Exécute une commande moteur.
+        
+        Args:
+            direction: 'forward', 'backward', 'stop', 'calibrate'
+        
+        Returns:
+            dict: Résultat de la commande
+        """
+        if not motor.is_available():
+            return {'error': 'Moteur non disponible'}
+        
+        try:
+            if direction == 'forward':
+                motor.move_forward()
+                return {'direction': direction, 'status': 'ok'}
+            elif direction == 'backward':
+                motor.move_backward()
+                return {'direction': direction, 'status': 'ok'}
+            elif direction == 'stop':
+                motor.stop()
+                return {'direction': direction, 'status': 'ok'}
+            elif direction == 'calibrate':
+                result = motor.calibrate()
+                return {'direction': direction, 'result': result, 'status': 'ok'}
+            else:
+                return {'error': f'Direction invalide: {direction}'}
+        except Exception as exc:
+            return {'error': str(exc)}
+    
     def _send_json_response(self, data, status_code=200):
         """Envoie une réponse JSON."""
         json_data = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
@@ -564,6 +594,35 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
 
         if debug_mode and body:
             logging.debug('POST body: %s', body.decode('utf-8', errors='replace'))
+        
+        # API endpoint pour contrôler le moteur
+        if self.path == '/api/motor/move':
+            try:
+                data = json.loads(body) if body else {}
+                direction = data.get('direction')
+                if not direction:
+                    self._send_json_response({'error': 'Paramètre direction requis'}, 400)
+                    return
+                
+                if direction not in ('forward', 'backward', 'stop', 'calibrate'):
+                    self._send_json_response({'error': 'Direction invalide'}, 400)
+                    return
+                
+                result = self._execute_motor_command(direction)
+                if 'error' in result:
+                    self._send_json_response(result, 500)
+                else:
+                    self._send_json_response(result)
+                return
+            except json.JSONDecodeError:
+                self._send_json_response({'error': 'JSON invalide'}, 400)
+                return
+            except Exception as exc:
+                self._send_json_response({'error': str(exc)}, 500)
+                return
+        elif self.path.startswith('/api/'):
+            self._send_json_response({'error': 'Endpoint non trouvé'}, 404)
+            return
 
         # Log SOAP action in test mode for visibility
         if test_mode and body:
