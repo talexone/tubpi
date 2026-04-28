@@ -17,15 +17,15 @@ class MotorDriver:
     MM_PER_PULSE = 0.1  # Valeur par défaut, à calibrer
 
     def __init__(self, forward_pin=20, backward_pin=21, pwm_pin=26, 
-                 limit_forward_pin=24, limit_backward_pin=23,
+                 limit_forward_pin=23, limit_backward_pin=24,
                  encoder_a_pin=17, encoder_b_pin=27, encoder_index_pin=22,
                  enable_encoder=True, enable_limit_switches=True):
         print("Initialiser les GPIO")
         self.forward_pin = forward_pin
         self.backward_pin = backward_pin
         self._pwm_pin = pwm_pin
-        # GPIO 24 : capteur devant (forward) - se déclenche en premier lors du mouvement vers l'avant
-        # GPIO 23 : capteur reculé (backward) - se déclenche en premier lors du mouvement vers l'arrière
+        # GPIO 23 : capteur devant (forward) - se déclenche en premier lors du mouvement vers l'avant
+        # GPIO 24 : capteur reculé (backward) - se déclenche en premier lors du mouvement vers l'arrière
         self.limit_forward_pin = limit_forward_pin
         self.limit_backward_pin = limit_backward_pin
         self.limit_switches_enabled = enable_limit_switches
