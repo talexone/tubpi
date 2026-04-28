@@ -158,15 +158,15 @@ user=$camera_user
 password=$camera_password
 EOF
     
-    chmod 600 "$PROJECT_DIR/camera.res"
-    chown root:root "$PROJECT_DIR/camera.res"
+    chmod 640 "$PROJECT_DIR/camera.res"
+    chown root:$TARGET_USER "$PROJECT_DIR/camera.res"
     echo -e "  ${GREEN}✓${NC} Fichier camera.res créé"
 else
     echo -e "  ${GREEN}✓${NC} Fichier camera.res déjà existant"
     # Vérifier les permissions
-    chmod 600 "$PROJECT_DIR/camera.res"
-    chown root:root "$PROJECT_DIR/camera.res"
-    echo -e "  ${GREEN}✓${NC} Permissions camera.res configurées (600, root:root)"
+    chmod 640 "$PROJECT_DIR/camera.res"
+    chown root:$TARGET_USER "$PROJECT_DIR/camera.res"
+    echo -e "  ${GREEN}✓${NC} Permissions camera.res configurées (640, root:$TARGET_USER)"
 fi
 
 # Copier les fichiers de service et adapter l'utilisateur
