@@ -246,21 +246,13 @@
             rtspUrl = data.url;
             rtspDisplayUrl = data.display_url;
             
-            // Update UI
-            const webrtcUrl = `${MEDIAMTX_URL}/${STREAM_NAME}`;
-            document.getElementById('webrtc-url').textContent = webrtcUrl;
-            document.getElementById('rtsp-url').textContent = rtspDisplayUrl;
-            
             // Start WebRTC stream
             startWebRTC();
           } else {
-            document.getElementById('rtsp-url').textContent = 'Erreur: Impossible de charger l\'URL';
-            document.getElementById('webrtc-url').textContent = 'Erreur: MediaMTX non configuré';
+            console.error('Erreur: MediaMTX non configuré');
           }
         } catch (error) {
           console.error('Erreur lors du chargement de l\'URL RTSP:', error);
-          document.getElementById('rtsp-url').textContent = 'Erreur réseau';
-          document.getElementById('webrtc-url').textContent = 'Erreur réseau';
         }
       })();
 
@@ -308,27 +300,6 @@
       setInterval(updateEncoderData, 200);
       // Initial update
       updateEncoderData();
-
-      function copyRtspUrl() {
-        const url = rtspUrl || document.getElementById('rtsp-url').textContent;
-        navigator.clipboard.writeText(url).then(() => {
-          alert('URL RTSP copiée: ' + url + '\n\nOuvrez cette URL dans VLC (Média → Ouvrir un flux réseau)');
-        }).catch(err => {
-          console.error('Erreur lors de la copie:', err);
-          // Fallback pour les anciens navigateurs
-          const textArea = document.createElement('textarea');
-          textArea.value = url;
-          document.body.appendChild(textArea);
-          textArea.select();
-          try {
-            document.execCommand('copy');
-            alert('URL RTSP copiée: ' + url);
-          } catch (err) {
-            alert('Erreur: ' + err);
-          }
-          document.body.removeChild(textArea);
-        });
-      }
 
       // Toggle limit switches on/off
       async function toggleLimitSwitches() {
