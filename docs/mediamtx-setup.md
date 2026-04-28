@@ -70,11 +70,11 @@ webrtcAddress: :8889
 paths:
   ma_camera:
     source: rtsp://USER:PASSWORD@192.168.1.108:554/cam/realmonitor?channel=1&subtype=1
-    sourceProtocol: automatic
+    rtspTransport: automatic
     sourceOnDemand: yes
   ma_camera_hq:
     source: rtsp://USER:PASSWORD@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0
-    sourceProtocol: automatic
+    rtspTransport: automatic
     sourceOnDemand: yes
 ```
 
@@ -178,7 +178,6 @@ Pour un flux basse latence, ajuster dans `/opt/mediamtx/update_config.sh`:
 paths:
   ma_camera:
     source: rtsp://...
-    sourceProtocol: tcp
     rtspTransport: tcp
 ```
 

@@ -47,7 +47,7 @@ paths:
   # Flux caméra principal
   ma_camera:
     source: rtsp://${USER}:${PASSWORD}@${CAMERA_IP}:${CAMERA_PORT}${STREAM_PATH}
-    sourceProtocol: automatic
+    rtspTransport: automatic
     sourceOnDemand: yes
     runOnDemand: echo "Stream ma_camera started"
     runOnDemandCloseAfter: 10s
@@ -55,7 +55,7 @@ paths:
   # Flux haute qualité (optionnel)
   ma_camera_hq:
     source: rtsp://${USER}:${PASSWORD}@${CAMERA_IP}:${CAMERA_PORT}/cam/realmonitor?channel=1&subtype=0
-    sourceProtocol: automatic
+    rtspTransport: automatic
     sourceOnDemand: yes
     runOnDemand: echo "Stream ma_camera_hq started"
     runOnDemandCloseAfter: 10s
