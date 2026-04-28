@@ -43,13 +43,15 @@
       input[type="range"] { flex: 1; }
       .video-panel { margin-top: 18px; padding: 16px; background: #1a1a1a; border-radius: 8px; }
       .video-container { width: 100%; max-width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 6px; overflow: hidden; position: relative; }
-      .video-container video, .video-container iframe { width: 100%; height: 100%; border: none; }
+      .video-container video, .video-container iframe { width: 100%; height: 100%; border: none; display: block; }
+      .video-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #888; text-align: center; }
       .video-info { margin-top: 12px; padding: 12px; background: #2a2a2a; border-radius: 6px; color: #fff; font-size: 13px; }
       .video-info strong { color: #4fc3f7; }
       .video-info code { background: #3a3a3a; padding: 3px 8px; border-radius: 3px; font-family: monospace; color: #a5d6a7; }
       .video-info a { color: #4fc3f7; text-decoration: none; margin-left: 10px; }
       .video-info a:hover { text-decoration: underline; }
-      .vlc-note { margin-top: 8px; padding: 10px; background: #424242; border-left: 3px solid #ff9800; border-radius: 4px; font-size: 12px; color: #ffb74d; }
+      .video-status { margin-top: 8px; padding: 8px; background: #2d5016; border-left: 3px solid #4caf50; border-radius: 4px; font-size: 12px; color: #81c784; }
+      .video-status.error { background: #5d2121; border-color: #f44336; color: #ef5350; }
     </style>
   </head>
   <body>
@@ -57,21 +59,25 @@
       <h1>Page de test - Tubpi</h1>
       <p>Utilisez les boutons pour envoyer des commandes de mouvement au rail.</p>
 
-      <h3>� Flux vidéo caméra RTSP</h3>
+      <h3>🎥 Flux vidéo caméra (WebRTC)</h3>
       <div class="video-panel">
-        <div class="video-container">
-          <video id="videoPlayer" controls autoplay muted>
-            <source id="videoSource" src="" type="application/x-rtsp">
-            Votre navigateur ne supporte pas la lecture RTSP directe.
-          </video>
+        <div class="video-container" id="video-container">
+          <video id="videoPlayer" controls autoplay muted playsinline></video>
+          <div class="video-placeholder" id="video-placeholder">
+            <div>📹 Connexion au flux vidéo...</div>
+          </div>
         </div>
         <div class="video-info">
-          <strong>URL RTSP:</strong> <code id="rtsp-url">Chargement...</code>
-          <a href="#" onclick="copyRtspUrl(); return false;">📋 Copier</a>
-          <a id="vlc-link" href="#">🎬 Ouvrir dans VLC</a>
-          <div class="vlc-note">
-            ⚠️ <strong>Note:</strong> Les navigateurs web ne supportent pas nativement le RTSP. 
-            Pour voir le flux vidéo, cliquez sur "Ouvrir dans VLC" ou copiez l'URL et ouvrez-la dans VLC (Média → Ouvrir un flux réseau).
+          <div>
+            <strong>Flux WebRTC (MediaMTX):</strong> <code id="webrtc-url">Chargement...</code>
+          </div>
+          <div style="margin-top: 8px;">
+            <strong>RTSP (VLC):</strong> <code id="rtsp-url">Chargement...</code>
+            <a href="#" onclick="copyRtspUrl(); return false;">📋 Copier</a>
+            <a id="vlc-link" href="#">🎬 Ouvrir dans VLC</a>
+          </div>
+          <div class="video-status" id="video-status" style="display: none;">
+            ✅ Flux WebRTC connecté
           </div>
         </div>
       </div>
@@ -137,8 +143,100 @@
       // RTSP URL configuration
       let rtspUrl = '';
       let rtspDisplayUrl = '';
+      
+      // MediaMTX WebRTC configuration
+      const MEDIAMTX_URL = `${window.location.protocol}//${window.location.hostname}:8889`;
+      const STREAM_NAME = 'ma_camera';
+      let pc = null; // RTCPeerConnection
+      let restartTimeout = null;
 
-      // Load RTSP URL on page load
+      // WebRTC connection to MediaMTX
+      async function startWebRTC() {
+        const video = document.getElementById('videoPlayer');
+        const placeholder = document.getElementById('video-placeholder');
+        const statusEl = document.getElementById('video-status');
+
+        try {
+          // Create peer connection
+          pc = new RTCPeerConnection({
+            iceServers: [{urls: 'stun:stun.l.google.com:19302'}]
+          });
+
+          // Handle incoming video track
+          pc.ontrack = (event) => {
+            console.log('WebRTC: Track received', event.track.kind);
+            video.srcObject = event.streams[0];
+            placeholder.style.display = 'none';
+            statusEl.style.display = 'block';
+            statusEl.className = 'video-status';
+            statusEl.textContent = '✅ Flux WebRTC connecté';
+          };
+
+          // Handle connection state changes
+          pc.onconnectionstatechange = () => {
+            console.log('WebRTC: Connection state:', pc.connectionState);
+            if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+              showError('Connexion WebRTC perdue, reconnexion...');
+              scheduleRestart();
+            }
+          };
+
+          // Add transceiver for receiving video
+          pc.addTransceiver('video', {direction: 'recvonly'});
+          pc.addTransceiver('audio', {direction: 'recvonly'});
+
+          // Create and set local offer
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+
+          // Send offer to MediaMTX and get answer
+          const response = await fetch(`${MEDIAMTX_URL}/ma_camera/whep`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/sdp'
+            },
+            body: offer.sdp
+          });
+
+          if (!response.ok) {
+            throw new Error(`MediaMTX error: ${response.status}`);
+          }
+
+          const answerSdp = await response.text();
+          await pc.setRemoteDescription({
+            type: 'answer',
+            sdp: answerSdp
+          });
+
+          console.log('WebRTC: Connection established');
+
+        } catch (error) {
+          console.error('Erreur WebRTC:', error);
+          showError(`Erreur WebRTC: ${error.message}`);
+          scheduleRestart();
+        }
+      }
+
+      function showError(message) {
+        const statusEl = document.getElementById('video-status');
+        statusEl.style.display = 'block';
+        statusEl.className = 'video-status error';
+        statusEl.textContent = `❌ ${message}`;
+      }
+
+      function scheduleRestart() {
+        if (restartTimeout) clearTimeout(restartTimeout);
+        restartTimeout = setTimeout(() => {
+          console.log('WebRTC: Attempting restart...');
+          if (pc) {
+            pc.close();
+            pc = null;
+          }
+          startWebRTC();
+        }, 5000);
+      }
+
+      // Load RTSP URL and start WebRTC
       (async function loadRtspUrl() {
         try {
           const response = await fetch('/camera/rtsp-url');
@@ -148,19 +246,21 @@
             rtspDisplayUrl = data.display_url;
             
             // Update UI
+            const webrtcUrl = `${MEDIAMTX_URL}/${STREAM_NAME}`;
+            document.getElementById('webrtc-url').textContent = webrtcUrl;
             document.getElementById('rtsp-url').textContent = rtspDisplayUrl;
-            document.getElementById('videoSource').src = rtspUrl;
             document.getElementById('vlc-link').href = data.vlc_url;
             
-            // Reload video element to apply new source
-            const video = document.getElementById('videoPlayer');
-            video.load();
+            // Start WebRTC stream
+            startWebRTC();
           } else {
             document.getElementById('rtsp-url').textContent = 'Erreur: Impossible de charger l\'URL';
+            document.getElementById('webrtc-url').textContent = 'Erreur: MediaMTX non configuré';
           }
         } catch (error) {
           console.error('Erreur lors du chargement de l\'URL RTSP:', error);
           document.getElementById('rtsp-url').textContent = 'Erreur réseau';
+          document.getElementById('webrtc-url').textContent = 'Erreur réseau';
         }
       })();
 
