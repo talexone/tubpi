@@ -7,8 +7,8 @@ import RPi.GPIO as GPIO
 
 class MotorDriver:
     # Ramp configuration
-    PWM_FREQ = 1000        # Hz
-    RAMP_STEPS = 50        # number of steps 0 → 100 %
+    PWM_FREQ = 500        # Hz
+    RAMP_STEPS = 20        # number of steps 0 → 100 %
     RAMP_STEP_DELAY = 0.02 # seconds between steps (~0.4 s total ramp time)
     
     # Encoder configuration
@@ -148,15 +148,15 @@ class MotorDriver:
         """Vérifie si le capteur de fin de course avant est déclenché."""
         if not self.enabled or not self.limit_switches_enabled:
             return False
-        # LOW = capteur déclenché (faisceau coupé)
-        return GPIO.input(self.limit_forward_pin) == GPIO.LOW
+        # HIGH = capteur déclenché (faisceau coupé)
+        return GPIO.input(self.limit_forward_pin) == GPIO.HIGH
 
     def _is_limit_backward_triggered(self):
         """Vérifie si le capteur de fin de course arrière est déclenché."""
         if not self.enabled or not self.limit_switches_enabled:
             return False
-        # LOW = capteur déclenché (faisceau coupé)
-        return GPIO.input(self.limit_backward_pin) == GPIO.LOW
+        # HIGH = capteur déclenché (faisceau coupé)
+        return GPIO.input(self.limit_backward_pin) == GPIO.HIGH
 
     def set_limit_switches_enabled(self, enabled):
         """Active ou désactive les capteurs de fin de course."""
