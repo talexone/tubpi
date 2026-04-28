@@ -49,6 +49,9 @@ Développer un système permettant de déplacer automatiquement une caméra sur 
      `python src/test_limit_switches.py`
    - Pour tester l'encodeur de position :
      `python src/test_encoder.py`
+   - **Pour tester le moteur sans rampe ni capteurs (tests rapides)** :
+     - Mode automatique : `python src/motor_driver_simple.py`
+     - Mode interactif : `python src/test_motor_simple.py`
 7. Lancer le serveur web avec `python src/web_app.py`.
 8. Ouvrir un navigateur sur `http://<adresse-du-raspberry-pi>:5000/` pour accéder à la page de test.
 
@@ -124,6 +127,59 @@ curl -X POST http://localhost:5000/encoder/reset
 **Note sur les performances** : L'encodeur utilise des interruptions optimisées (bouncetime=1ms, lock non-bloquant) pour éviter les ralentissements système. Si vous constatez des problèmes de timing, utilisez le mode `--no-encoder` pour diagnostiquer.
 
 Pour plus de détails sur la calibration et l'API, consultez [docs/software.md](docs/software.md).
+
+## Test moteur simplifié (sans rampe, capteurs ni PWM)
+
+Pour les tests et le débogage rapides, un pilote moteur simplifié est disponible :
+
+### Caractéristiques
+- **Pas de rampe d'accélération** : démarrage et arrêt instantanés
+- **Pas de capteurs de fin de course** : mouvement libre sans limites
+- **Pas d'encodeur** : focus sur le test du matériel de base
+- **Pas de PWM** : vitesse fixe 100%, marche/arrêt uniquement
+- **Contrôle minimal** : uniquement forward, backward, stop
+
+### Utilisation
+
+**Mode automatique** (séquence de test prédéfinie) :
+```bash
+cd /opt/tubpi/src
+sudo python3 motor_driver_simple.py
+```
+
+**Mode interactif** (contrôle manuel) :
+```bash
+cd /opt/tubpi/src
+sudo python3 test_motor_simple.py
+```
+
+Commandes disponibles en mode interactif :
+- `f` - Avancer à pleine vitesse
+- `b` - Reculer à pleine vitesse
+- `s` - Stop
+- `i` - Afficher l'état du moteur
+- `t` - Lancer un test automatique
+- `q` - Quitter
+
+**⚠️ Attention** : Sans capteurs de fin de course, le moteur peut dépasser les limites physiques. Utilisez ce mode uniquement pour :
+- Vérifier le câblage du moteur
+- Tester le sens de rotation (forward/backward)
+- Diagnostiquer des problèmes matériels
+- Développement et tests rapides
+
+### Intégration dans votre code
+```python
+from motor_driver_simple import SimpleMotorDriver
+
+# Créer une instance (pas de paramètre de vitesse)
+motor = SimpleMotorDriver()
+
+# Utilisation
+motor.forward()          # Avant à 100%
+motor.backward()         # Arrière à 100%
+motor.stop()             # Arrêt immédiat
+motor.cleanup()          # Libérer les GPIO
+```
 
 ## Installation en tant que service (démarrage automatique)
 
