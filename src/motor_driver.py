@@ -8,7 +8,7 @@ import RPi.GPIO as GPIO
 class MotorDriver:
     # Ramp configuration
     PWM_FREQ = 1000        # Hz
-    RAMP_STEPS = 20        # number of steps 0 → 100 %
+    RAMP_STEPS = 50        # number of steps 0 → 100 %
     RAMP_STEP_DELAY = 0.02 # seconds between steps (~0.4 s total ramp time)
     
     # Encoder configuration
@@ -19,7 +19,7 @@ class MotorDriver:
     def __init__(self, forward_pin=20, backward_pin=21, pwm_pin=26, 
                  limit_forward_pin=24, limit_backward_pin=23,
                  encoder_a_pin=17, encoder_b_pin=27, encoder_index_pin=22,
-                 enable_encoder=True):
+                 enable_encoder=True, enable_limit_switches=True):
         print("Initialiser les GPIO")
         self.forward_pin = forward_pin
         self.backward_pin = backward_pin
@@ -28,6 +28,7 @@ class MotorDriver:
         # GPIO 23 : capteur reculé (backward) - se déclenche en premier lors du mouvement vers l'arrière
         self.limit_forward_pin = limit_forward_pin
         self.limit_backward_pin = limit_backward_pin
+        self.limit_switches_enabled = enable_limit_switches
         
         # Encodeur de position
         self.encoder_enabled = enable_encoder
@@ -145,17 +146,26 @@ class MotorDriver:
 
     def _is_limit_forward_triggered(self):
         """Vérifie si le capteur de fin de course avant est déclenché."""
-        if not self.enabled:
+        if not self.enabled or not self.limit_switches_enabled:
             return False
         # LOW = capteur déclenché (faisceau coupé)
         return GPIO.input(self.limit_forward_pin) == GPIO.LOW
 
     def _is_limit_backward_triggered(self):
         """Vérifie si le capteur de fin de course arrière est déclenché."""
-        if not self.enabled:
+        if not self.enabled or not self.limit_switches_enabled:
             return False
         # LOW = capteur déclenché (faisceau coupé)
         return GPIO.input(self.limit_backward_pin) == GPIO.LOW
+
+    def set_limit_switches_enabled(self, enabled):
+        """Active ou désactive les capteurs de fin de course."""
+        self.limit_switches_enabled = enabled
+        print(f"Capteurs de fin de course {'activés' if enabled else 'désactivés'}")
+
+    def get_limit_switches_enabled(self):
+        """Retourne l'état des capteurs de fin de course."""
+        return self.limit_switches_enabled
 
     def _set_direction(self, fwd, bwd):
         GPIO.output(self.forward_pin, fwd)
@@ -307,11 +317,12 @@ class MotorDriver:
     def get_limit_switches_status(self):
         """Retourne l'état des capteurs de fin de course."""
         if not self.enabled:
-            return {'forward': False, 'backward': False, 'available': False}
+            return {'forward': False, 'backward': False, 'available': False, 'enabled': self.limit_switches_enabled}
         return {
             'forward': self._is_limit_forward_triggered(),
             'backward': self._is_limit_backward_triggered(),
-            'available': True
+            'available': True,
+            'enabled': self.limit_switches_enabled
         }
 
     def can_move_forward(self):

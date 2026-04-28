@@ -72,9 +72,8 @@
             <strong>Flux WebRTC (MediaMTX):</strong> <code id="webrtc-url">Chargement...</code>
           </div>
           <div style="margin-top: 8px;">
-            <strong>RTSP (VLC):</strong> <code id="rtsp-url">Chargement...</code>
+            <strong>URL RTSP:</strong> <code id="rtsp-url">Chargement...</code>
             <a href="#" onclick="copyRtspUrl(); return false;">📋 Copier</a>
-            <a id="vlc-link" href="#">🎬 Ouvrir dans VLC</a>
           </div>
           <div class="video-status" id="video-status" style="display: none;">
             ✅ Flux WebRTC connecté
@@ -122,6 +121,13 @@
         <div class="limit-switches">
           <div class="limit-switch" id="limit-forward">Capteur avant: --</div>
           <div class="limit-switch" id="limit-backward">Capteur arrière: --</div>
+          <div style="margin-top: 12px; padding: 10px; background: #2a2a2a; border-radius: 4px;">
+            <label style="display: flex; align-items: center; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="limit-switches-enabled" onchange="toggleLimitSwitches()" 
+                     style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+              <span style="font-weight: 500;">Activer les capteurs de fin de course</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -249,7 +255,6 @@
             const webrtcUrl = `${MEDIAMTX_URL}/${STREAM_NAME}`;
             document.getElementById('webrtc-url').textContent = webrtcUrl;
             document.getElementById('rtsp-url').textContent = rtspDisplayUrl;
-            document.getElementById('vlc-link').href = data.vlc_url;
             
             // Start WebRTC stream
             startWebRTC();
@@ -286,6 +291,12 @@
             limitForwardEl.className = 'limit-switch ' + (ls.forward ? 'triggered' : 'free');
             limitBackwardEl.textContent = `Capteur arrière: ${ls.backward ? 'DÉCLENCHÉ' : 'LIBRE'}`;
             limitBackwardEl.className = 'limit-switch ' + (ls.backward ? 'triggered' : 'free');
+            
+            // Mettre à jour la checkbox
+            const checkbox = document.getElementById('limit-switches-enabled');
+            if (checkbox && ls.enabled !== undefined) {
+              checkbox.checked = ls.enabled;
+            }
           }
         } catch (error) {
           console.error('Erreur lors de la récupération des données:', error);
@@ -316,6 +327,57 @@
           }
           document.body.removeChild(textArea);
         });
+      }
+
+      // Toggle limit switches on/off
+      async function toggleLimitSwitches() {
+        const checkbox = document.getElementById('limit-switches-enabled');
+        const enabled = checkbox.checked;
+        
+        try {
+          const response = await fetch('/limit_switches', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ enabled: enabled })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Capteurs de fin de course:', data.message);
+            
+            // Afficher un message visuel
+            const statusMsg = document.createElement('div');
+            statusMsg.textContent = data.message;
+            statusMsg.style.cssText = `
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              background: ${enabled ? '#2d5016' : '#5d2121'};
+              border-left: 3px solid ${enabled ? '#4caf50' : '#f44336'};
+              color: ${enabled ? '#81c784' : '#ef5350'};
+              padding: 12px 20px;
+              border-radius: 6px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+              z-index: 10000;
+              font-weight: 500;
+            `;
+            document.body.appendChild(statusMsg);
+            
+            setTimeout(() => {
+              statusMsg.style.opacity = '0';
+              statusMsg.style.transition = 'opacity 0.5s';
+              setTimeout(() => document.body.removeChild(statusMsg), 500);
+            }, 2000);
+          } else {
+            console.error('Erreur lors de la modification des capteurs');
+            checkbox.checked = !enabled; // Annuler le changement
+          }
+        } catch (error) {
+          console.error('Erreur:', error);
+          checkbox.checked = !enabled; // Annuler le changement
+        }
       }
 
       async function sendMove(direction) {

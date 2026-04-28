@@ -211,6 +211,49 @@ def encoder_reset():
     except Exception as exc:
         return jsonify({'error': str(exc)}), 500
 
+@app.route('/limit_switches', methods=['POST'])
+def set_limit_switches():
+    """Active ou désactive les capteurs de fin de course."""
+    if motor is None:
+        init_motor()
+    
+    # Si motor est None, déléguer à onvif-gateway
+    if motor is None:
+        try:
+            data = request.get_json()
+            response = requests.post('http://localhost/api/motor/limit_switches', 
+                                    json=data, 
+                                    timeout=2)
+            if response.status_code == 200:
+                result = response.json()
+                result['source'] = 'onvif-gateway'
+                return jsonify(result)
+            else:
+                return jsonify({
+                    'error': f'Erreur API onvif-gateway: {response.status_code}'
+                }), response.status_code
+        except Exception as exc:
+            return jsonify({
+                'error': 'Impossible de contacter onvif-gateway',
+                'details': str(exc)
+            }), 503
+    
+    # Sinon utiliser motor local
+    try:
+        data = request.get_json()
+        enabled = data.get('enabled', True)
+        
+        motor.set_limit_switches_enabled(enabled)
+        
+        return jsonify({
+            'success': True,
+            'enabled': motor.get_limit_switches_enabled(),
+            'message': f"Capteurs de fin de course {'activés' if enabled else 'désactivés'}",
+            'source': 'local'
+        })
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
+
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
     if motor is None:

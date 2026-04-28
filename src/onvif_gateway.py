@@ -620,6 +620,29 @@ class OnvifProxyHandler(http.server.BaseHTTPRequestHandler):
             except Exception as exc:
                 self._send_json_response({'error': str(exc)}, 500)
                 return
+        elif self.path == '/api/motor/limit_switches':
+            try:
+                data = json.loads(body) if body else {}
+                enabled = data.get('enabled', True)
+                
+                if not motor.is_available():
+                    self._send_json_response({'error': 'Motor non disponible'}, 503)
+                    return
+                
+                motor.set_limit_switches_enabled(enabled)
+                
+                self._send_json_response({
+                    'success': True,
+                    'enabled': motor.get_limit_switches_enabled(),
+                    'message': f"Capteurs de fin de course {'activés' if enabled else 'désactivés'}"
+                })
+                return
+            except json.JSONDecodeError:
+                self._send_json_response({'error': 'JSON invalide'}, 400)
+                return
+            except Exception as exc:
+                self._send_json_response({'error': str(exc)}, 500)
+                return
         elif self.path.startswith('/api/'):
             self._send_json_response({'error': 'Endpoint non trouvé'}, 404)
             return
