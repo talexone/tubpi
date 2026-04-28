@@ -1,0 +1,33 @@
+[Unit]
+Description=MediaMTX RTSP/WebRTC Server
+Documentation=https://github.com/bluenviron/mediamtx
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/mediamtx
+
+# Update configuration before starting (inject camera credentials)
+ExecStartPre=/opt/mediamtx/update_config.sh
+
+# Start MediaMTX
+ExecStart=/opt/mediamtx/mediamtx /opt/mediamtx/mediamtx.yml
+
+# Restart on failure
+Restart=always
+RestartSec=5
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mediamtx
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,17 +1,61 @@
 # Configuration MediaMTX pour streaming WebRTC
 
-La webapp utilise MediaMTX (déjà installé sur le Raspberry Pi) pour diffuser le flux de la caméra RTSP en WebRTC.
+La webapp utilise MediaMTX pour diffuser le flux de la caméra RTSP en WebRTC.
 
-## Configuration requise
+## Installation
 
-MediaMTX doit être configuré pour:
-1. Lire le flux RTSP de la caméra
-2. Exposer ce flux via WebRTC sur le port 8889
-3. Utiliser le protocole WHEP (WebRTC-HTTP Egress Protocol)
+### Méthode automatique (recommandée)
 
-### Fichier de configuration MediaMTX
+```bash
+cd /opt/tubpi
+sudo chmod +x install_mediamtx.sh
+sudo ./install_mediamtx.sh
+```
 
-Éditer `/etc/mediamtx/mediamtx.yml` (ou le chemin de configuration utilisé):
+Ce script:
+- Détecte votre architecture (ARM64, ARM, x86_64)
+- Télécharge MediaMTX v1.9.4
+- Installe dans `/opt/mediamtx/`
+- Copie le script de configuration
+- Génère la configuration avec credentials depuis `camera.res`
+- Installe et démarre le service systemd
+
+### Méthode manuelle
+
+```bash
+# 1. Télécharger MediaMTX pour votre architecture
+cd /opt
+sudo mkdir -p mediamtx
+cd mediamtx
+
+# Pour Raspberry Pi 5 (ARM64)
+sudo wget https://github.com/bluenviron/mediamtx/releases/download/v1.9.4/mediamtx_v1.9.4_linux_arm64v8.tar.gz
+sudo tar -xzf mediamtx_v1.9.4_linux_arm64v8.tar.gz
+sudo rm mediamtx_v1.9.4_linux_arm64v8.tar.gz
+
+# 2. Copier le script de mise à jour
+sudo cp /opt/tubpi/update_mediamtx_config.sh /opt/mediamtx/update_config.sh
+sudo chmod +x /opt/mediamtx/update_config.sh
+
+# 3. Générer la configuration
+sudo /opt/mediamtx/update_config.sh
+
+# 4. Installer le service systemd
+sudo cp /opt/tubpi/systemd/mediamtx.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable mediamtx
+sudo systemctl start mediamtx
+```
+
+## Configuration
+
+MediaMTX est configuré automatiquement via le script `update_config.sh` qui:
+1. Lit les credentials depuis `/opt/tubpi/camera.res`
+2. Génère `/opt/mediamtx/mediamtx.yml` avec les bons paramètres
+
+### Fichier de configuration généré
+
+Le fichier `/opt/mediamtx/mediamtx.yml` contient:
 
 ```yaml
 # API et interface web
@@ -25,56 +69,30 @@ webrtcAddress: :8889
 # Configuration du flux
 paths:
   ma_camera:
-    source: rtsp://admin:password@192.168.1.108:554/cam/realmonitor?channel=1&subtype=1
+    source: rtsp://USER:PASSWORD@192.168.1.108:554/cam/realmonitor?channel=1&subtype=1
     sourceProtocol: automatic
     sourceOnDemand: yes
-    runOnDemand: echo "Stream started"
+  ma_camera_hq:
+    source: rtsp://USER:PASSWORD@192.168.1.108:554/cam/realmonitor?channel=1&subtype=0
+    sourceProtocol: automatic
+    sourceOnDemand: yes
 ```
 
-### Variables à adapter
+**Note**: Les credentials sont automatiquement injectés depuis `/opt/tubpi/camera.res`
 
-Remplacer dans la configuration:
-- `admin:password` par les vraies credentials de la caméra (lire depuis `/opt/tubpi/camera.res`)
-- `192.168.1.108` par l'IP de la caméra
-- `ma_camera` doit correspondre au nom de flux dans la webapp (déjà configuré)
+### Modifier la configuration manuellement
 
-## Script de mise à jour automatique
-
-Pour générer automatiquement la configuration MediaMTX depuis `/opt/tubpi/camera.res`:
+Si vous devez modifier la configuration:
 
 ```bash
-#!/bin/bash
-# update_mediamtx_config.sh
+# Éditer le script de mise à jour
+sudo nano /opt/mediamtx/update_config.sh
 
-CAMERA_RES="/opt/tubpi/camera.res"
-MEDIAMTX_CONFIG="/etc/mediamtx/mediamtx.yml"
-CAMERA_IP="192.168.1.108"
-CAMERA_PORT="554"
-STREAM_PATH="/cam/realmonitor?channel=1&subtype=1"
+# Régénérer la configuration
+sudo /opt/mediamtx/update_config.sh
 
-# Lire les credentials
-USER=$(grep "^user=" "$CAMERA_RES" | cut -d= -f2)
-PASSWORD=$(grep "^password=" "$CAMERA_RES" | cut -d= -f2)
-
-# Générer la configuration
-cat > "$MEDIAMTX_CONFIG" << EOF
-api: yes
-apiAddress: :8889
-
-webrtc: yes
-webrtcAddress: :8889
-webrtcServerKey: server.key
-webrtcServerCert: server.crt
-
-paths:
-  ma_camera:
-    source: rtsp://${USER}:${PASSWORD}@${CAMERA_IP}:${CAMERA_PORT}${STREAM_PATH}
-    sourceProtocol: automatic
-    sourceOnDemand: yes
-EOF
-
-chmod 640 "$MEDIAMTX_CONFIG"
-echo "Configuration MediaMTX mise à jour"
+# Redémarrer MediaMTX
+sudo systemctl restart mediamtx
 ```
 
 ## Vérification
@@ -91,7 +109,7 @@ sudo systemctl status mediamtx
 curl http://localhost:8889/v3/config/paths/list
 ```
 
-Devrait retourner la liste des flux incluant `ma_camera`.
+Devrait retourner la liste des flux incluant `ma_camera` et `ma_camera_hq`.
 
 ### 3. Tester le flux WebRTC
 
@@ -151,13 +169,59 @@ curl -v "rtsp://admin:password@192.168.1.108:554/cam/realmonitor?channel=1&subty
 
 ### Qualité vidéo
 
-Pour un flux haute qualité, utiliser `subtype=0` (stream principal) au lieu de `subtype=1` (sous-stream).
+MediaMTX propose deux flux:
+- **ma_camera** - Flux qualité moyenne (subtype=1) pour économiser la bande passante
+- **ma_camera_hq** - Flux haute qualité (subtype=0) pour une meilleure image
 
-Pour un flux basse latence, ajuster dans MediaMTX:
+Pour un flux basse latence, ajuster dans `/opt/mediamtx/update_config.sh`:
 ```yaml
 paths:
   ma_camera:
     source: rtsp://...
     sourceProtocol: tcp
     rtspTransport: tcp
+```
+
+## Structure des fichiers
+
+```
+/opt/mediamtx/
+├── mediamtx              # Binaire exécutable
+├── mediamtx.yml          # Configuration (générée automatiquement)
+├── update_config.sh      # Script de mise à jour de configuration
+└── mediamtx.yml.bak     # Sauvegarde automatique
+
+/opt/tubpi/
+├── camera.res                    # Credentials de la caméra
+├── update_mediamtx_config.sh     # Script source de configuration
+├── install_mediamtx.sh           # Script d'installation
+└── systemd/
+    └── mediamtx.service          # Service systemd
+
+/etc/systemd/system/
+└── mediamtx.service              # Service installé
+```
+
+## Mise à jour
+
+Pour mettre à jour MediaMTX vers une nouvelle version:
+
+1. Éditer `install_mediamtx.sh` et changer `MEDIAMTX_VERSION`
+2. Arrêter le service: `sudo systemctl stop mediamtx`
+3. Réexécuter l'installation: `sudo ./install_mediamtx.sh`
+4. Redémarrer: `sudo systemctl start mediamtx`
+
+## Désinstallation
+
+```bash
+# Arrêter et désactiver le service
+sudo systemctl stop mediamtx
+sudo systemctl disable mediamtx
+
+# Supprimer les fichiers
+sudo rm /etc/systemd/system/mediamtx.service
+sudo rm -rf /opt/mediamtx
+
+# Recharger systemd
+sudo systemctl daemon-reload
 ```
