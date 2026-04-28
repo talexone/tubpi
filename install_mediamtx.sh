@@ -15,13 +15,13 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Version de MediaMTX
-MEDIAMTX_VERSION="v1.9.4"
+MEDIAMTX_VERSION="v1.18.0"
 
 # Détection de l'architecture
 ARCH=$(uname -m)
 case "$ARCH" in
     aarch64|arm64)
-        MEDIAMTX_ARCH="arm64v8"
+        MEDIAMTX_ARCH="arm64"
         ;;
     armv7l|armhf)
         MEDIAMTX_ARCH="armv7"

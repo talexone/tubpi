@@ -29,9 +29,9 @@ sudo mkdir -p mediamtx
 cd mediamtx
 
 # Pour Raspberry Pi 5 (ARM64)
-sudo wget https://github.com/bluenviron/mediamtx/releases/download/v1.9.4/mediamtx_v1.9.4_linux_arm64v8.tar.gz
-sudo tar -xzf mediamtx_v1.9.4_linux_arm64v8.tar.gz
-sudo rm mediamtx_v1.9.4_linux_arm64v8.tar.gz
+sudo wget https://github.com/bluenviron/mediamtx/releases/download/v1.18.0/mediamtx_v1.18.0_linux_arm64.tar.gz
+sudo tar -xzf mediamtx_v1.18.0_linux_arm64.tar.gz
+sudo rm mediamtx_v1.18.0_linux_arm64.tar.gz
 
 # 2. Copier le script de mise à jour
 sudo cp /opt/tubpi/update_mediamtx_config.sh /opt/mediamtx/update_config.sh
