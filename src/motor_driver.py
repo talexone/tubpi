@@ -18,6 +18,7 @@ class MotorDriver:
 
     def __init__(self, forward_pin=20, backward_pin=21, pwm_pin=26, 
                  limit_forward_pin=23, limit_backward_pin=24,
+                 motor_fail_pin=16,
                  encoder_a_pin=17, encoder_b_pin=27, encoder_index_pin=22,
                  enable_encoder=True, enable_limit_switches=True):
         print("Initialiser les GPIO")
@@ -29,6 +30,8 @@ class MotorDriver:
         self.limit_forward_pin = limit_forward_pin
         self.limit_backward_pin = limit_backward_pin
         self.limit_switches_enabled = enable_limit_switches
+        # GPIO 16 : signal de fail du driver moteur (LOW = défaillance)
+        self.motor_fail_pin = motor_fail_pin
         
         # Encodeur de position
         self.encoder_enabled = enable_encoder
@@ -64,6 +67,10 @@ class MotorDriver:
             # Pull-up interne : HIGH quand libre, LOW quand déclenché
             GPIO.setup(self.limit_forward_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
             GPIO.setup(self.limit_backward_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            
+            # Configuration du signal de fail du driver moteur
+            # Pull-up interne : HIGH = normal, LOW = défaillance du driver
+            GPIO.setup(self.motor_fail_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
             
             # Configuration de l'encodeur (optionnel)
             if self.encoder_enabled:
@@ -167,6 +174,13 @@ class MotorDriver:
         """Retourne l'état des capteurs de fin de course."""
         return self.limit_switches_enabled
 
+    def _is_motor_driver_failed(self):
+        """Vérifie si le driver moteur signale une défaillance."""
+        if not self.enabled:
+            return False
+        # LOW = défaillance du driver moteur (surchauffe, court-circuit, etc.)
+        return GPIO.input(self.motor_fail_pin) == GPIO.LOW
+
     def _set_direction(self, fwd, bwd):
         GPIO.output(self.forward_pin, fwd)
         GPIO.output(self.backward_pin, bwd)
@@ -178,6 +192,11 @@ class MotorDriver:
         step = max(1, int((100 - self._duty) / self.RAMP_STEPS))
         duty = self._duty
         while duty < 100 and not self._cancel.is_set():
+            # Vérifier le fail state du driver moteur
+            if self._is_motor_driver_failed():
+                print("Défaillance du driver moteur détectée - arrêt d'urgence")
+                self._cancel.set()
+                break
             # Vérifier les capteurs de fin de course pendant la rampe
             if self._current_fwd and self._is_limit_forward_triggered():
                 print("Capteur de fin de course avant déclenché - arrêt")
@@ -315,23 +334,30 @@ class MotorDriver:
         return self.is_available()
 
     def get_limit_switches_status(self):
-        """Retourne l'état des capteurs de fin de course."""
+        """Retourne l'état des capteurs de fin de course et du driver moteur."""
         if not self.enabled:
-            return {'forward': False, 'backward': False, 'available': False, 'enabled': self.limit_switches_enabled}
+            return {
+                'forward': False, 
+                'backward': False, 
+                'available': False, 
+                'enabled': self.limit_switches_enabled,
+                'motor_driver_fail': False
+            }
         return {
             'forward': self._is_limit_forward_triggered(),
             'backward': self._is_limit_backward_triggered(),
             'available': True,
-            'enabled': self.limit_switches_enabled
+            'enabled': self.limit_switches_enabled,
+            'motor_driver_fail': self._is_motor_driver_failed()
         }
 
     def can_move_forward(self):
         """Vérifie si le mouvement vers l'avant est possible."""
-        return self.enabled and not self._is_limit_forward_triggered()
+        return self.enabled and not self._is_limit_forward_triggered() and not self._is_motor_driver_failed()
 
     def can_move_backward(self):
         """Vérifie si le mouvement vers l'arrière est possible."""
-        return self.enabled and not self._is_limit_backward_triggered()
+        return self.enabled and not self._is_limit_backward_triggered() and not self._is_motor_driver_failed()
 
     # ------------------------------------------------------------------
     # Encoder / Position tracking methods

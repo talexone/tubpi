@@ -68,13 +68,6 @@
           </div>
         </div>
         <div class="video-info">
-          <div>
-            <strong>Flux WebRTC (MediaMTX):</strong> <code id="webrtc-url">Chargement...</code>
-          </div>
-          <div style="margin-top: 8px;">
-            <strong>URL RTSP:</strong> <code id="rtsp-url">Chargement...</code>
-            <a href="#" onclick="copyRtspUrl(); return false;">📋 Copier</a>
-          </div>
           <div class="video-status" id="video-status" style="display: none;">
             ✅ Flux WebRTC connecté
           </div>
@@ -121,6 +114,7 @@
         <div class="limit-switches">
           <div class="limit-switch" id="limit-forward">Capteur avant: --</div>
           <div class="limit-switch" id="limit-backward">Capteur arrière: --</div>
+          <div class="limit-switch" id="motor-driver-fail">Driver moteur: --</div>
           <div style="margin-top: 12px; padding: 10px; background: #2a2a2a; border-radius: 4px;">
             <label style="display: flex; align-items: center; cursor: pointer; user-select: none;">
               <input type="checkbox" id="limit-switches-enabled" onchange="toggleLimitSwitches()" 
@@ -145,6 +139,7 @@
       const pulsesEl = document.getElementById('pulses');
       const limitForwardEl = document.getElementById('limit-forward');
       const limitBackwardEl = document.getElementById('limit-backward');
+      const motorDriverFailEl = document.getElementById('motor-driver-fail');
 
       // RTSP URL configuration
       let rtspUrl = '';
@@ -291,6 +286,12 @@
             limitForwardEl.className = 'limit-switch ' + (ls.forward ? 'triggered' : 'free');
             limitBackwardEl.textContent = `Capteur arrière: ${ls.backward ? 'DÉCLENCHÉ' : 'LIBRE'}`;
             limitBackwardEl.className = 'limit-switch ' + (ls.backward ? 'triggered' : 'free');
+            
+            // Afficher l'état du driver moteur
+            if (motorDriverFailEl && ls.motor_driver_fail !== undefined) {
+              motorDriverFailEl.textContent = `Driver moteur: ${ls.motor_driver_fail ? '⚠ DÉFAILLANCE' : '✓ OK'}`;
+              motorDriverFailEl.className = 'limit-switch ' + (ls.motor_driver_fail ? 'triggered' : 'free');
+            }
             
             // Mettre à jour la checkbox
             const checkbox = document.getElementById('limit-switches-enabled');
