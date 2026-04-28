@@ -49,16 +49,12 @@ paths:
     source: rtsp://${USER}:${PASSWORD}@${CAMERA_IP}:${CAMERA_PORT}${STREAM_PATH}
     rtspTransport: automatic
     sourceOnDemand: yes
-    runOnDemand: echo "Stream ma_camera started"
-    runOnDemandCloseAfter: 10s
     
   # Flux haute qualité (optionnel)
   ma_camera_hq:
     source: rtsp://${USER}:${PASSWORD}@${CAMERA_IP}:${CAMERA_PORT}/cam/realmonitor?channel=1&subtype=0
     rtspTransport: automatic
     sourceOnDemand: yes
-    runOnDemand: echo "Stream ma_camera_hq started"
-    runOnDemandCloseAfter: 10s
 EOF
 
 # Sécuriser le fichier (contient des credentials)
