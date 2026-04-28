@@ -60,7 +60,7 @@ Le fichier `/opt/mediamtx/mediamtx.yml` contient:
 ```yaml
 # API et interface web
 api: yes
-apiAddress: :8889
+apiAddress: :9997
 
 # Activer WebRTC
 webrtc: yes
@@ -106,7 +106,7 @@ sudo systemctl status mediamtx
 ### 2. Tester l'API
 
 ```bash
-curl http://localhost:8889/v3/config/paths/list
+curl http://localhost:9997/v3/config/paths/list
 ```
 
 Devrait retourner la liste des flux incluant `ma_camera` et `ma_camera_hq`.

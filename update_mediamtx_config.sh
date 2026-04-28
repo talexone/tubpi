@@ -31,7 +31,7 @@ cat > "$MEDIAMTX_CONFIG" << EOF
 
 # API HTTP
 api: yes
-apiAddress: :8889
+apiAddress: :9997
 
 # WebRTC
 webrtc: yes
@@ -64,4 +64,5 @@ chown root:root "$MEDIAMTX_CONFIG"
 echo "Configuration MediaMTX générée avec succès"
 echo "  Flux: ma_camera (subtype=1 - qualité moyenne)"
 echo "  Flux HQ: ma_camera_hq (subtype=0 - haute qualité)"
-echo "  API/WebRTC: http://localhost:8889"
+echo "  API: http://localhost:9997"
+echo "  WebRTC: http://localhost:8889"
