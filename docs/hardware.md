@@ -8,6 +8,7 @@
 | M1 (Forward) | GPIO 20 | Direction avant | Commande directionnelle |
 | M2 (Backward) | GPIO 21 | Direction arrière | Commande directionnelle |
 | PWMA | GPIO 26 | PWM moteur | Contrôle de vitesse |
+| Motor Fail | GPIO 18 | Signal défaillance driver | LOW = défaillance détectée |
 | **Capteurs fin de course** | | | |
 | Capteur avant | GPIO 23 | Fin de course forward | Phototransistor (LOW = déclenché) |
 | Capteur arrière | GPIO 24 | Fin de course backward | Phototransistor (LOW = déclenché) |

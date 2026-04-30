@@ -18,7 +18,7 @@ class MotorDriver:
 
     def __init__(self, forward_pin=20, backward_pin=21, pwm_pin=26, 
                  limit_forward_pin=23, limit_backward_pin=24,
-                 motor_fail_pin=16,
+                 motor_fail_pin=18,
                  encoder_a_pin=17, encoder_b_pin=27, encoder_index_pin=22,
                  enable_encoder=True, enable_limit_switches=True):
         print("Initialiser les GPIO")
@@ -30,7 +30,7 @@ class MotorDriver:
         self.limit_forward_pin = limit_forward_pin
         self.limit_backward_pin = limit_backward_pin
         self.limit_switches_enabled = enable_limit_switches
-        # GPIO 16 : signal de fail du driver moteur (LOW = défaillance)
+        # GPIO 18 : signal de fail du driver moteur (LOW = défaillance)
         self.motor_fail_pin = motor_fail_pin
         
         # Encodeur de position
