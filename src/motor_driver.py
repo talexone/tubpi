@@ -7,7 +7,7 @@ import RPi.GPIO as GPIO
 
 class MotorDriver:
     # Ramp configuration
-    PWM_FREQ = 500        # Hz
+    PWM_FREQ = 10000       # Hz
     RAMP_STEPS = 20        # number of steps 0 → 100 %
     RAMP_STEP_DELAY = 0.02 # seconds between steps (~0.4 s total ramp time)
     
@@ -173,6 +173,34 @@ class MotorDriver:
     def get_limit_switches_enabled(self):
         """Retourne l'état des capteurs de fin de course."""
         return self.limit_switches_enabled
+
+    def set_encoder_enabled(self, enabled):
+        """Active ou désactive l'encodeur de position."""
+        if not self.enabled:
+            return
+        
+        if enabled and not self.encoder_enabled:
+            # Activer l'encodeur
+            try:
+                GPIO.add_event_detect(self.encoder_a_pin, GPIO.BOTH, callback=self._encoder_callback, bouncetime=1)
+                GPIO.add_event_detect(self.encoder_b_pin, GPIO.BOTH, callback=self._encoder_callback, bouncetime=1)
+                self.encoder_enabled = True
+                print("Encodeur activé")
+            except Exception as exc:
+                print(f"Erreur lors de l'activation de l'encodeur : {exc}")
+        elif not enabled and self.encoder_enabled:
+            # Désactiver l'encodeur
+            try:
+                GPIO.remove_event_detect(self.encoder_a_pin)
+                GPIO.remove_event_detect(self.encoder_b_pin)
+                self.encoder_enabled = False
+                print("Encodeur désactivé")
+            except Exception as exc:
+                print(f"Erreur lors de la désactivation de l'encodeur : {exc}")
+
+    def get_encoder_enabled(self):
+        """Retourne l'état de l'encodeur."""
+        return self.encoder_enabled
 
     def _is_motor_driver_failed(self):
         """Vérifie si le driver moteur signale une défaillance."""
@@ -414,6 +442,7 @@ class MotorDriver:
         """
         with self._encoder_lock:
             return {
+                'enabled': self.encoder_enabled,
                 'position_pulses': self._encoder_position,
                 'position_mm': self._encoder_position * self.MM_PER_PULSE,
                 'total_distance_mm': self._encoder_total_pulses * self.MM_PER_PULSE,

@@ -56,10 +56,8 @@
   </head>
   <body>
     <div class="container">
-      <h1>Page de test - Tubpi</h1>
+      <h1>Maintenance - Camera Tub</h1>
       <p>Utilisez les boutons pour envoyer des commandes de mouvement au rail.</p>
-
-      <h3>🎥 Flux vidéo caméra (WebRTC)</h3>
       <div class="video-panel">
         <div class="video-container" id="video-container">
           <video id="videoPlayer" controls autoplay muted playsinline></video>
@@ -74,7 +72,7 @@
         </div>
       </div>
 
-      <h3>�🎮 Contrôle continu</h3>
+      <h3>Commandes</h3>
       <div class="buttons">
         <button class="primary" onclick="sendMove('forward')">Avancer</button>
         <button class="primary" onclick="sendMove('backward')">Reculer</button>
@@ -115,11 +113,18 @@
           <div class="limit-switch" id="limit-forward">Capteur avant: --</div>
           <div class="limit-switch" id="limit-backward">Capteur arrière: --</div>
           <div class="limit-switch" id="motor-driver-fail">Driver moteur: --</div>
-          <div style="margin-top: 12px; padding: 10px; background: #2a2a2a; border-radius: 4px;">
+          <div style="margin-top: 12px; padding: 10px; background: #f4f4f4; border-radius: 4px;">
             <label style="display: flex; align-items: center; cursor: pointer; user-select: none;">
               <input type="checkbox" id="limit-switches-enabled" onchange="toggleLimitSwitches()" 
                      style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
               <span style="font-weight: 500;">Activer les capteurs de fin de course</span>
+            </label>
+          </div>
+          <div style="margin-top: 8px; padding: 10px; background: #f4f4f4; border-radius: 4px;">
+            <label style="display: flex; align-items: center; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="encoder-enabled" onchange="toggleEncoder()" 
+                     style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+              <span style="font-weight: 500;">Activer l'encodeur de position</span>
             </label>
           </div>
         </div>
@@ -270,6 +275,12 @@
             sessionEl.innerHTML = `${enc.session_distance_mm.toFixed(2)}<span class="stat-unit">mm</span>`;
             totalEl.innerHTML = `${enc.total_distance_mm.toFixed(2)}<span class="stat-unit">mm</span>`;
             pulsesEl.innerHTML = `${enc.position_pulses}<span class="stat-unit">imp</span>`;
+            
+            // Mettre à jour la checkbox encodeur
+            const encoderCheckbox = document.getElementById('encoder-enabled');
+            if (encoderCheckbox && enc.enabled !== undefined) {
+              encoderCheckbox.checked = enc.enabled;
+            }
           }
           
           if (data.limit_switches) {
@@ -344,6 +355,56 @@
             }, 2000);
           } else {
             console.error('Erreur lors de la modification des capteurs');
+            checkbox.checked = !enabled; // Annuler le changement
+          }
+        } catch (error) {
+          console.error('Erreur:', error);
+          checkbox.checked = !enabled; // Annuler le changement
+        }
+      }
+
+      async function toggleEncoder() {
+        const checkbox = document.getElementById('encoder-enabled');
+        const enabled = checkbox.checked;
+        
+        try {
+          const response = await fetch('/encoder', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ enabled: enabled })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Encodeur:', data.message);
+            
+            // Afficher un message visuel
+            const statusMsg = document.createElement('div');
+            statusMsg.textContent = data.message;
+            statusMsg.style.cssText = `
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              background: ${enabled ? '#2d5016' : '#5d2121'};
+              border-left: 3px solid ${enabled ? '#4caf50' : '#f44336'};
+              color: ${enabled ? '#81c784' : '#ef5350'};
+              padding: 12px 20px;
+              border-radius: 6px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+              z-index: 10000;
+              font-weight: 500;
+            `;
+            document.body.appendChild(statusMsg);
+            
+            setTimeout(() => {
+              statusMsg.style.opacity = '0';
+              statusMsg.style.transition = 'opacity 0.5s';
+              setTimeout(() => document.body.removeChild(statusMsg), 500);
+            }, 2000);
+          } else {
+            console.error('Erreur lors de la modification de l\'encodeur');
             checkbox.checked = !enabled; // Annuler le changement
           }
         } catch (error) {
